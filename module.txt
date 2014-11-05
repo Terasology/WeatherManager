@@ -1,0 +1,12 @@
+{
+    "id" : "WeatherMan",
+    "version" : "0.1.0",
+    "displayName" : "Weather Man",
+    "author" : "Linus van Elswijk",
+    "description" : "This module adds weather to the game",
+    "dependencies" : [
+        { "id" : "MarkovChains",
+          "minVersion" : "1.0.0"
+        }
+    ]
+}
