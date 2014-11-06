@@ -237,6 +237,9 @@ public final class WeatherCondition extends ProbabilisticEvent {
 
             for (Severity heaviness : Severity.values()) {
                 for (Type type: Type.values()) {
+                    //if (type == Type.HAIL || type == type.SNOW)
+                    //    continue;
+
                     final DownfallCondition withThunder = new DownfallCondition(heaviness, type, true);
                     final DownfallCondition withoutThunder = new DownfallCondition(heaviness, type, false);
 

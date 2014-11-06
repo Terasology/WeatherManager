@@ -16,6 +16,7 @@
 package org.terasology.weatherManager;
 
 import org.junit.Test;
+import org.terasology.weatherManager.systems.MarkovChainWeatherGenerator;
 import org.terasology.weatherManager.weather.WeatherCondition;
 
 /**
@@ -25,9 +26,17 @@ public class WeatherConditionTest {
 
     @Test
     public void printNrOfDownfallConditions() {
+        MarkovChainWeatherGenerator markovChainWeatherGenerator = new MarkovChainWeatherGenerator();
+
+        //warm up
+        /*for (int i = 0; i < 100; i++) {
+            System.out.println(i + ": " + markovChainWeatherGenerator.getNext());
+        }*/
+
         System.out.println( WeatherCondition.values().length + " conditions:");
         for (WeatherCondition condition: WeatherCondition.values()) {
             System.out.println("\t" + condition + "(" + condition.likelihood() + ")");
         }
+
     }
 }
