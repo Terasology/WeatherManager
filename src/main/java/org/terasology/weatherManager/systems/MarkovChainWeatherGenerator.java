@@ -15,14 +15,13 @@
  */
 package org.terasology.weatherManager.systems;
 
-import org.terasology.math.Vector2i;
-import org.terasology.rendering.nui.properties.OneOf;
+import org.terasology.utilities.random.FastRandom;
+import org.terasology.utilities.random.Random;
 import org.terasology.weatherManager.MarkovChain;
+import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.WeatherCondition;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by Linus on 5-11-2014.
@@ -30,6 +29,10 @@ import java.util.List;
 public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
     private final MarkovChain<WeatherCondition> weatherMarkovChain;
+
+    private final Random randomNumberGenerator;
+
+    private final float durationScale;
 
     private static final float[][][] FIRST_ORDER_CONDITION_TRANSITION_MATRIX =
             generateFirstOrderConditionTransitionMatrix();
@@ -132,8 +135,10 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
         }
     }
 
-    public MarkovChainWeatherGenerator() {
-        weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX);
+    public MarkovChainWeatherGenerator(final long seed, final float durationScale) {
+        this.durationScale = durationScale;
+        randomNumberGenerator = new FastRandom(seed);
+        weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX, randomNumberGenerator);
 
         // warm up: produce a believable initial history using the transition matrix;
         for (int i = 0; i < weatherMarkovChain.order * 2; i++) {
@@ -146,8 +151,23 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
         return "Markov Chain Weather Generator";
     }
 
+    private float randomDuration(WeatherCondition condition) {
+        double duration = randomNumberGenerator.nextGaussian();
+
+        if(condition.downfallCondition.amount != WeatherCondition.Severity.NONE) {
+            duration /= 3.0;
+        }
+
+        return (float)duration * durationScale;
+    }
+
     @Override
-    public WeatherCondition getNext() {
-        return weatherMarkovChain.next();
+    public ConditionAndDuration getNext() {
+        final WeatherCondition condition = weatherMarkovChain.next();
+
+        return new ConditionAndDuration(
+                condition,
+                randomDuration(condition)
+        );
     }
 }

@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.terasology.weatherManager.systems;
-
-import org.terasology.weatherManager.weather.ConditionAndDuration;
+package org.terasology.weatherManager.weather;
 
 /**
- * Created by Linus on 5-11-2014.
- */
-public interface WeatherConditionProvider {
+* Created by Linus on 8-11-2014.
+*/
+public final class ConditionAndDuration {
+    public final WeatherCondition condition;
+    public final float duration;
 
-    String toDisplayString();
-
-    ConditionAndDuration getNext();
-
+    public ConditionAndDuration(final WeatherCondition condition, final float duration) {
+        this.condition = condition;
+        this.duration = duration;
+    }
 }

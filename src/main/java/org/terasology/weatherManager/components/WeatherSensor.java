@@ -22,4 +22,11 @@ import org.terasology.entitySystem.Component;
  */
 public class WeatherSensor implements Component {
 
+    public WeatherSensor(final boolean canCarryWeather, final boolean isStatic) {
+        this.canCarryWeather = canCarryWeather;
+        this.isStatic = isStatic;
+    }
+
+    public final boolean canCarryWeather;
+    public final boolean isStatic;
 }
