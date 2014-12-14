@@ -39,6 +39,7 @@ public final class WeatherCondition extends ProbabilisticEvent {
         return likelihood;
     }
 
+    @Override
     public String toString() {
         String string = cloudinessString();
 
@@ -158,7 +159,7 @@ public final class WeatherCondition extends ProbabilisticEvent {
 
     public static final class DownfallCondition extends ProbabilisticEvent {
 
-        private static final DownfallCondition[] VALUES = generateInstances();
+        private static final DownfallCondition[] DOWNFALL_VALUES = generateInstances();
 
         public static enum Type {
             NONE("none"),
@@ -191,7 +192,7 @@ public final class WeatherCondition extends ProbabilisticEvent {
         }
 
         public static DownfallCondition[] values() {
-            return VALUES;
+            return DOWNFALL_VALUES;
         }
 
         @Override
@@ -237,7 +238,7 @@ public final class WeatherCondition extends ProbabilisticEvent {
 
             for (Severity heaviness : Severity.values()) {
                 for (Type type: Type.values()) {
-                    if (type == Type.HAIL || type == type.SNOW)
+                    if (type == Type.HAIL || type == Type.SNOW)
                         continue;
 
                     final DownfallCondition withThunder = new DownfallCondition(heaviness, type, true);

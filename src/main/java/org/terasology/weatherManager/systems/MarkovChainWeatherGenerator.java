@@ -15,9 +15,9 @@
  */
 package org.terasology.weatherManager.systems;
 
+import org.terasology.markovChains.MarkovChain;
 import org.terasology.utilities.random.FastRandom;
 import org.terasology.utilities.random.Random;
-import org.terasology.weatherManager.MarkovChain;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.WeatherCondition;
 
@@ -105,16 +105,16 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
     }
 
-    private static int transitionDelta(final WeatherCondition.DownfallCondition from, final WeatherCondition.DownfallCondition to) {
-        int delta = difference(from.amount, to.amount);
-
-        if(from.amount != WeatherCondition.Severity.NONE && to.amount != WeatherCondition.Severity.NONE &&
-                from.type != to.type) {
-            delta += 2;
-        }
-
-        return delta;
-    }
+//    private static int transitionDelta(final WeatherCondition.DownfallCondition from, final WeatherCondition.DownfallCondition to) {
+//        int delta = difference(from.amount, to.amount);
+//
+//        if(from.amount != WeatherCondition.Severity.NONE && to.amount != WeatherCondition.Severity.NONE &&
+//                from.type != to.type) {
+//            delta += 2;
+//        }
+//
+//        return delta;
+//    }
 
     private static int difference(final WeatherCondition.Severity left, final WeatherCondition.Severity right) {
         return toInt(left) - toInt(right);
