@@ -3,14 +3,11 @@ package org.terasology.weatherManager.systems;
 import org.slf4j.LoggerFactory;
 import org.terasology.engine.Time;
 import org.terasology.entitySystem.entity.EntityManager;
-import org.terasology.entitySystem.entity.EntityRef;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
-import org.terasology.network.ClientComponent;
 import org.terasology.registry.In;
-import org.terasology.weatherManager.components.WeatherSensor;
 
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.world.time.WorldTime;
@@ -41,13 +38,13 @@ public class WeatherManagerSystem extends BaseComponentSystem implements UpdateS
         logger.info("Current weather :" + current.condition + " (" + current.duration + ")");
     }
 
-    private void makeClientsSimulationCarriers() {
-        Iterable<EntityRef> entities = entityManager.getEntitiesWith(ClientComponent.class);
-
-        for(EntityRef entity: entities) {
-            entity.addComponent(new WeatherSensor(true, false));
-        }
-    }
+//    private void makeClientsSimulationCarriers() {
+//        Iterable<EntityRef> entities = entityManager.getEntitiesWith(ClientComponent.class);
+//
+//        for(EntityRef entity: entities) {
+//            entity.addComponent(new WeatherSensor(true, false));
+//        }
+//    }
 
     float ds = 0.0f;
 

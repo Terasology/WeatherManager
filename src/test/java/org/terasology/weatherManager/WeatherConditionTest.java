@@ -17,7 +17,6 @@ package org.terasology.weatherManager;
 
 import org.junit.Test;
 import org.terasology.weatherManager.systems.MarkovChainWeatherGenerator;
-import org.terasology.weatherManager.weather.WeatherCondition;
 import org.terasology.world.time.WorldTime;
 
 /**
