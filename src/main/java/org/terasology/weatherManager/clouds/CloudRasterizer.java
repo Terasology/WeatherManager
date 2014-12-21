@@ -44,16 +44,41 @@ public class CloudRasterizer implements WorldRasterizerPlugin {
 
         CloudFacet facet = chunkRegion.getFacet(CloudFacet.class);
 
+        if (facet == null) {
+            return;
+        }
+
         int relHeight = facet.getHeight() - chunk.getChunkWorldOffsetY();
 
         if (relHeight >= 0 && relHeight < chunk.getChunkSizeY()) {
             for (int z = 0; z < chunk.getChunkSizeZ(); z++) {
                 for (int x = 0; x < chunk.getChunkSizeX(); x++) {
-                    if (facet.get(x, z)) {
+                    boolean isClouded = facet.get(x, z);
+                    Block oldBlock = chunk.getBlock(x, relHeight, z);
+                    Block block = getBlock(isClouded, oldBlock);
+                    if (!block.equals(oldBlock)) {
                         chunk.setBlock(x, relHeight, z, cloudBlock);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * @param isClouded true if it should be a cloud block
+     * @param oldBlock the current block
+     * @return the new block - possibly still the one one, never <code>null</code>.
+     */
+    public Block getBlock(boolean isClouded, Block oldBlock) {
+
+        if (isClouded && oldBlock.equals(BlockManager.getAir())) {
+            return cloudBlock;
+        }
+
+        if (!isClouded && oldBlock.equals(cloudBlock)) {
+            return BlockManager.getAir();
+        }
+
+        return oldBlock;
     }
 }

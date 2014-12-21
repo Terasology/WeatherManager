@@ -17,6 +17,7 @@
 package org.terasology.weatherManager.clouds;
 
 import org.terasology.math.Rect2i;
+import org.terasology.registry.CoreRegistry;
 import org.terasology.utilities.procedural.BrownianNoise3D;
 import org.terasology.utilities.procedural.PerlinNoise;
 import org.terasology.world.generation.Border3D;
@@ -35,34 +36,43 @@ public class CloudProvider implements FacetProviderPlugin {
 
     private BrownianNoise3D noise;
 
-    private int height = 127;
-
-    private float anim = 0;
-
     @Override
     public void setSeed(long seed) {
-        noise = new BrownianNoise3D(new PerlinNoise(seed), 6);
+        noise = new BrownianNoise3D(new PerlinNoise(seed), 4);
     }
 
     @Override
     public void process(GeneratingRegion region) {
+
+        CloudUpdateManager cloudManager = CoreRegistry.get(CloudUpdateManager.class);
+
+        // cloudManager is available only if run with AUTHORITY flag
+        if (cloudManager == null) {
+            return;
+        }
+
         Border3D border = region.getBorderForFacet(CloudFacet.class);
-        CloudFacet facet = new CloudFacet(height, region.getRegion(), border);
+        CloudFacet facet = new CloudFacet(cloudManager.getCloudHeight(), region.getRegion(), border);
+
+        float anim = cloudManager.getAnimFrame();
 
         Rect2i reg = facet.getWorldRegion();
-        double fac = 0.5 / noise.getScale();
 
         for (int y = reg.minY(); y <= reg.maxY(); y++) {
             for (int x = reg.minX(); x <= reg.maxX(); x++) {
-                float nx = x * 0.01f;
-                float ny = y * 0.01f;
-                if (noise.noise(nx, ny, anim) * fac < 0) {
+                if (isClouded(x, y, anim)) {
                     facet.setWorld(x, y, true);
                 }
             }
         }
 
         region.setRegionFacet(CloudFacet.class, facet);
+    }
+
+    public boolean isClouded(int wx, int wz, float anim) {
+        float nx = wx * 0.01f;
+        float nz = wz * 0.01f;
+        return (noise.noise(nx, anim, nz) < 0);
     }
 
 }
