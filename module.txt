@@ -1,7 +1,7 @@
 {
-    "id" : "WeatherMan",
+    "id" : "WeatherManager",
     "version" : "0.1.0",
-    "displayName" : "Weather Man",
+    "displayName" : "Weather Manager",
     "author" : "Linus van Elswijk",
     "description" : "This module adds weather to the game",
     "dependencies" : [
