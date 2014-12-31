@@ -28,14 +28,25 @@ import java.util.Arrays;
  */
 public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
+    private static final float[][][] FIRST_ORDER_CONDITION_TRANSITION_MATRIX =
+            generateFirstOrderConditionTransitionMatrix();
+
     private final MarkovChain<WeatherCondition> weatherMarkovChain;
 
     private final Random randomNumberGenerator;
 
     private final float durationScale;
 
-    private static final float[][][] FIRST_ORDER_CONDITION_TRANSITION_MATRIX =
-            generateFirstOrderConditionTransitionMatrix();
+    public MarkovChainWeatherGenerator(final long seed, final float durationScale) {
+        this.durationScale = durationScale;
+        randomNumberGenerator = new FastRandom(seed);
+        weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX, randomNumberGenerator);
+
+        // warm up: produce a believable initial history using the transition matrix;
+        for (int i = 0; i < weatherMarkovChain.order * 2; i++) {
+            weatherMarkovChain.next();
+        }
+    }
 
     private static float[][][] generateFirstOrderConditionTransitionMatrix() {
         final WeatherCondition[] stateList = WeatherCondition.values();
@@ -65,18 +76,17 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
                             break;
                     }
 
-                    if(!isMonotonic(previousState, currentState, nextState)) {
+                    if (!isMonotonic(previousState, currentState, nextState)) {
                         transitionMatrix[previous][current][next] *= 0.3f;
                     }
 
-                    if(currentState.downfallCondition.type == WeatherCondition.DownfallCondition.Type.NONE &&
-                       nextState.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE
-                    ) {
+                    if (currentState.downfallCondition.type == WeatherCondition.DownfallCondition.Type.NONE
+                        && nextState.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE) {
                         transitionMatrix[previous][current][next] *= 0.3f; //Because we don't like constant rain
                     }
-                    if(toInt(currentState.downfallCondition.amount) < toInt(nextState.downfallCondition.amount)) {
+                    if (toInt(currentState.downfallCondition.amount) < toInt(nextState.downfallCondition.amount)) {
                         transitionMatrix[previous][current][next] *= 1.8f; //Because we don't like constant rain
-                    }
+     }
                 }
             }
         }
@@ -85,22 +95,22 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
     }
 
     private static boolean isMonotonic(final WeatherCondition previous, final WeatherCondition current, final WeatherCondition next) {
-        return isMonotonic(previous.downfallCondition.amount, current.downfallCondition.amount, next.downfallCondition.amount) &&
-               isMonotonic(previous.cloudiness, current.cloudiness, next.cloudiness) &&
-               !(previous.downfallCondition.withThunder && !current.downfallCondition.withThunder && next.downfallCondition.withThunder);
+        return isMonotonic(previous.downfallCondition.amount, current.downfallCondition.amount, next.downfallCondition.amount)
+               && isMonotonic(previous.cloudiness, current.cloudiness, next.cloudiness)
+               && !(previous.downfallCondition.withThunder && !current.downfallCondition.withThunder && next.downfallCondition.withThunder);
     }
 
     private static boolean isMonotonic(final WeatherCondition.Severity previous, final WeatherCondition.Severity current, final WeatherCondition.Severity next) {
-        return toInt(previous) <= toInt(current) && toInt(current) <= toInt(next) ||
-               toInt(previous) >= toInt(current) && toInt(current) >= toInt(next);
+        return toInt(previous) <= toInt(current) && toInt(current) <= toInt(next)
+           ||  toInt(previous) >= toInt(current) && toInt(current) >= toInt(next);
     }
 
     private static int transitionDelta(final WeatherCondition from, final WeatherCondition to) {
         return  Math.abs(difference(from.cloudiness, to.cloudiness)) +
                 Math.abs(difference(from.downfallCondition.amount, to.downfallCondition.amount)) +
-                ((from.downfallCondition.type != to.downfallCondition.type &&
-                        from.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE &&
-                        to.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE) ? 2 : 0) +
+                ((from.downfallCondition.type != to.downfallCondition.type
+                     && from.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE
+                     && to.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE) ? 2 : 0) +
                 ((from.downfallCondition.withThunder != to.downfallCondition.withThunder) ? 2 : 0);
 
     }
@@ -135,17 +145,6 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
         }
     }
 
-    public MarkovChainWeatherGenerator(final long seed, final float durationScale) {
-        this.durationScale = durationScale;
-        randomNumberGenerator = new FastRandom(seed);
-        weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX, randomNumberGenerator);
-
-        // warm up: produce a believable initial history using the transition matrix;
-        for (int i = 0; i < weatherMarkovChain.order * 2; i++) {
-            weatherMarkovChain.next();
-        }
-    }
-
     @Override
     public String toDisplayString() {
         return "Markov Chain Weather Generator";
@@ -154,11 +153,11 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
     private float randomDuration(WeatherCondition condition) {
         double duration = randomNumberGenerator.nextGaussian();
 
-        if(condition.downfallCondition.amount != WeatherCondition.Severity.NONE) {
+        if (condition.downfallCondition.amount != WeatherCondition.Severity.NONE) {
             duration /= 3.0;
         }
 
-        return (float)duration * durationScale;
+        return (float) duration * durationScale;
     }
 
     @Override

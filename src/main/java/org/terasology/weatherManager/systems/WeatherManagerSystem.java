@@ -1,41 +1,71 @@
+/*
+ * Copyright 2014 MovingBlocks
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.terasology.weatherManager.systems;
 
+import java.math.RoundingMode;
+
 import org.slf4j.LoggerFactory;
-import org.terasology.engine.Time;
 import org.terasology.entitySystem.entity.EntityManager;
+import org.terasology.entitySystem.entity.EntityRef;
+import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
+import org.terasology.logic.delay.DelayManager;
+import org.terasology.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.registry.In;
-
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.world.time.WorldTime;
 
+import com.google.common.math.DoubleMath;
+
 @RegisterSystem(RegisterMode.AUTHORITY)
-public class WeatherManagerSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
+public class WeatherManagerSystem extends BaseComponentSystem {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
 
-    private WeatherConditionProvider weatherConditionProvider = new MarkovChainWeatherGenerator(12354, WorldTime.DAY_LENGTH);
+    private WeatherConditionProvider weatherConditionProvider;
 
     private ConditionAndDuration current;
-    private float timeOnCurrent;
 
     @In
-    Time time;
-
-    @In WorldTime worldTime;
+    private EntityManager entityManager;
 
     @In
-    EntityManager entityManager;
+    private DelayManager delayManager;
+
+    @In
+    private WorldTime worldTime;
+
 
     @Override
-    public void initialise() {
+    public void postBegin() {
         logger.info("Initializing WeatherManSystem");
 
+        float avglength = WorldTime.DAY_LENGTH / 48.0f; // worldTime.getTimeRate(); -- not available for modules
+        weatherConditionProvider = new MarkovChainWeatherGenerator(12354, avglength);
         current = weatherConditionProvider.getNext();
-        logger.info("Current weather :" + current.condition + " (" + current.duration + ")");
+
+        EntityRef weatherEntity = entityManager.create();
+
+        long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
+        delayManager.addDelayedAction(weatherEntity, "Weather", length);
+
+        logger.info("Current weather: " + current.condition + " (" + current.duration + ")");
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -46,22 +76,12 @@ public class WeatherManagerSystem extends BaseComponentSystem implements UpdateS
 //        }
 //    }
 
-    float ds = 0.0f;
+    @ReceiveEvent
+    public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
 
-    @Override
-    public void update(float delta) {
-        timeOnCurrent += delta;
-        ds+=delta;
+        current = weatherConditionProvider.getNext();
 
-        while(timeOnCurrent >= current.duration) {
-            timeOnCurrent -= current.duration / WorldTime.DAY_LENGTH / 1000;
-            current = weatherConditionProvider.getNext();
-            logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
-        }
+        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
 
-        if(ds > 2.0f) {
-            ds = 0;
-            logger.info("timeUntil next change: " + (current.duration - timeOnCurrent));
-        }
     }
 }
