@@ -36,7 +36,7 @@ public class CloudRasterizer implements WorldRasterizerPlugin {
     @Override
     public void initialize() {
         BlockManager blockManager = CoreRegistry.get(BlockManager.class);
-        cloudBlock = blockManager.getBlock("WeatherMan:Cloud");
+        cloudBlock = blockManager.getBlock("WeatherManager:Cloud");
     }
 
     @Override
