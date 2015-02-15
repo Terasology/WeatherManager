@@ -19,7 +19,6 @@ import com.google.common.base.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * Pseudo enum class to describe different downfall conditions of the weather.
@@ -28,8 +27,9 @@ import java.util.function.Function;
  */
 public final class DownfallCondition {
     private static final Map<DownfallValues, DownfallCondition> INSTANCES = new HashMap<>();
-    public static final DownfallCondition NO_DOWNFALL = get(Severity.NONE, DownfallType.NONE, false);
 
+    public static final DownfallCondition NO_DOWNFALL = get(Severity.NONE, DownfallType.NONE, false);
+    
     private final DownfallValues downfallValues;
 
     private DownfallCondition(final DownfallValues values) {
@@ -66,21 +66,15 @@ public final class DownfallCondition {
 
         if(INSTANCES.containsKey(values)) {
             return INSTANCES.get(values);
-        }
-        else {
+        } else {
             DownfallCondition ret = new DownfallCondition(values);
             INSTANCES.put(values, ret);
             return ret;
         }
-        /*
-        return INSTANCES.computeIfAbsent(values,
-                new Function<DownfallValues, DownfallCondition>() {
-                    @Override
-                    public DownfallCondition apply(DownfallValues values) {
-                        return new DownfallCondition(values);
-                    }
-                }
-        );*/
+
+        /* cooler Java8 version that is not supported yet
+        return INSTANCES.computeIfAbsent(values, (DownfallValues v) -> new DownfallCondition(v) );
+        */
     }
 
     public static enum DownfallType {
