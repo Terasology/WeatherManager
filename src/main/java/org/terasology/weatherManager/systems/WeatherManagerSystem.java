@@ -56,7 +56,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public void postBegin() {
         logger.info("Initializing WeatherManSystem");
 
-        float avglength = WorldTime.DAY_LENGTH / 48.0f; // worldTime.getTimeRate(); -- not available for modules
+        float avglength = WorldTime.DAY_LENGTH / 480.0f;// / 48.0f; // worldTime.getTimeRate(); -- not available for modules
         weatherConditionProvider = new MarkovChainWeatherGenerator(12354, avglength);
         current = weatherConditionProvider.getNext();
 

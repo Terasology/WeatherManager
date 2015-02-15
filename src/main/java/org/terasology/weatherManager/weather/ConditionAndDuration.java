@@ -26,4 +26,8 @@ public final class ConditionAndDuration {
         this.condition = condition;
         this.duration = duration;
     }
+
+    public String toString() {
+        return condition.toString() + " (" + duration + ")";
+    }
 }

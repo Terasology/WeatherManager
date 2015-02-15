@@ -15,133 +15,158 @@
  */
 package org.terasology.weatherManager.systems;
 
-import org.terasology.markovChains.MarkovChain;
+import org.terasology.markovChains.RawMarkovChain;
+import org.terasology.markovChains.dataStructures.TransitionMatrix;
+import org.terasology.math.TeraMath;
+import org.terasology.math.geom.Vector2f;
 import org.terasology.utilities.random.FastRandom;
 import org.terasology.utilities.random.Random;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
+import org.terasology.weatherManager.weather.DownfallCondition;
+import org.terasology.weatherManager.weather.Severity;
 import org.terasology.weatherManager.weather.WeatherCondition;
 
-import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by Linus on 5-11-2014.
  */
 public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
-    private static final float[][][] FIRST_ORDER_CONDITION_TRANSITION_MATRIX =
-            generateFirstOrderConditionTransitionMatrix();
+    private static final List<Severity> SEVERITIES = new LinkedList<Severity>() { {
+        addLast(Severity.NONE);
+        addLast(Severity.LIGHT);
+        addLast(Severity.MODERATE);
+        addLast(Severity.HEAVY);
+    }};
 
-    private final MarkovChain<WeatherCondition> weatherMarkovChain;
+    private static final TransitionMatrix CLOUDINESS_TRANSITION_MATRIX =
+            new TransitionMatrix(2, Severity.values().length) {
+
+                private float priorLikelyHood(int state) {
+                    switch(state)
+                    {
+                        case 0: return 0.4f;
+                        case 1: return 1.0f;
+                        case 2: return 1.0f;
+                        default:
+                        case 3: return 0.6f;
+                    }
+                }
+
+                @Override
+                public float get(int... states) {
+                    checkInputStates(false, 0, states);
+
+                    int previous = states[0];
+                    int current = states[1];
+                    int next = states[2];
+
+                    int diff = TeraMath.fastAbs(next - current);
+
+                    return priorLikelyHood(next)
+                            *  TeraMath.pow(0.75f, TeraMath.fastAbs(diff))       // diff of 0 is most likely
+                            * (isMonotonic(previous, current, next) ? 1 : 0.25f); // prefer consistent changes
+                }
+            };
+
+    private static final TransitionMatrix PRECIPITATION_TRANSITION_MATRIX =
+            new TransitionMatrix(4, Severity.values().length) {
+
+                private float priorLikelyHood(int state) {
+                    switch(state) {
+                        case 0: return 1.0f;
+                        case 1: return 0.5f;
+                        case 2: return 0.7f;
+                        default:
+                        case 3: return 0.3f;
+                    }
+                }
+
+                private float priorLikelyHood(int state, int currentCloudCondition) {
+                    if(currentCloudCondition == 0 && state != 0) {
+                        //no downfall on a clear sky
+                        return 0.0f;
+                    }
+                    else {
+                        //make it unlikely that the downfall conditions are more severe than the cloudiness
+                        int exponent = Math.max(0, currentCloudCondition - state);
+
+                        return TeraMath.pow(0.8f, exponent);
+                    }
+                }
+
+                @Override
+                public float get(int... states) {
+                    checkInputStates(false, 0, states);
+
+                    int cloudPrevious = states[0];
+                    int cloudCurrent = states[1];
+                    int previous = states[2];
+                    int current = states[3];
+                    int next = states[4];
+
+                    int diff = TeraMath.fastAbs(next - current);
+
+                    return priorLikelyHood(next) * priorLikelyHood(next, cloudCurrent)
+                           * TeraMath.pow(0.66f, TeraMath.fastAbs(diff - 1))      // diff of 1 is most likely
+                           * (isMonotonic(previous, current, next) ? 1 : 0.5f)    // prefer consistent changes
+                           * (follows(cloudPrevious, cloudCurrent, previous, current) ? 2 : 1) // rain follows cloud progression
+                           * ((current == 0 && next != 0) ? 0.2f : 1.0f) // we don't want it to start raining too often
+                           * ((previous != 0 && current != 0 && next < current) ? 1.5f : 1); // prefer short rain
+                }
+            };
+
+    private final RawMarkovChain cloudinessGenerator    =
+            new RawMarkovChain(CLOUDINESS_TRANSITION_MATRIX);
+    private final RawMarkovChain precipitationGenerator =
+            new RawMarkovChain(PRECIPITATION_TRANSITION_MATRIX);
+
+    private int[] cloudinessHistory = new int[2];
+    private int[] precipitationHistory = new int[2];
+    private Vector2f previousWind;
 
     private final Random randomNumberGenerator;
 
-    private final float durationScale;
+    //Default mean duration of each generated weatherCondition.
+    private final float meanDuration;
 
-    public MarkovChainWeatherGenerator(final long seed, final float durationScale) {
-        this.durationScale = durationScale;
-        randomNumberGenerator = new FastRandom(seed);
-        weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX, randomNumberGenerator);
+    private static final Vector2f ANGLE_REFERENCE_VECTOR = new Vector2f(1,0);
+
+    private static boolean isMonotonic(int first, int second, int third) {
+        return (first <= second && second <= third) ||
+               (first >= second && second >= third);
+    }
+
+    private static boolean follows(int firstA, int secondA, int firstB, int secondB ) {
+        return (firstA > secondA && firstB > secondB) || (firstA < secondA && firstB < secondB);
+    }
+
+    public Vector2f nextWindCondition() {
+        float expectedMagnitude = ((cloudinessHistory[1] + precipitationHistory[1]) / 8.0f)  * 0.75f + previousWind.length() * 0.25f;
+        float stdDev = (cloudinessHistory[1] / 8.0f);
+
+        float nextMagnitude = Math.max((float)TeraMath.fastAbs(TeraMath.fastAbs(randomNumberGenerator.nextGaussian(expectedMagnitude, stdDev))), 0.001f);
+        float newAngle = (float)randomNumberGenerator.nextGaussian(0.0, TeraMath.PI * 0.25f)
+                       + previousWind.angle(ANGLE_REFERENCE_VECTOR);
+
+        return new Vector2f((float)Math.cos(newAngle) * nextMagnitude,
+                            (float)Math.sin(newAngle) * nextMagnitude
+        );
+    }
+
+
+    public MarkovChainWeatherGenerator(final long seed, final float meanDuration) {
+        this.meanDuration = meanDuration;
+        this.randomNumberGenerator = new FastRandom(seed);
+        //weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX, randomNumberGenerator);
+
+        previousWind = new Vector2f(1.0f, 0.0f);
 
         // warm up: produce a believable initial history using the transition matrix;
-        for (int i = 0; i < weatherMarkovChain.order * 2; i++) {
-            weatherMarkovChain.next();
-        }
-    }
-
-    private static float[][][] generateFirstOrderConditionTransitionMatrix() {
-        final WeatherCondition[] stateList = WeatherCondition.values();
-        final int nrOfStates = WeatherCondition.values().length;
-
-
-        float[][][] transitionMatrix = new float[nrOfStates][nrOfStates][nrOfStates];
-
-
-        for (int previous = 0; previous < nrOfStates; previous++) {
-            final WeatherCondition previousState = stateList[previous];
-            for (int current = 0; current < nrOfStates; current++) {
-                final WeatherCondition currentState = stateList[current];
-                for (int next = 0; next < nrOfStates; next++) {
-                    final WeatherCondition nextState = stateList[next];
-                    switch (Math.abs(transitionDelta(currentState, nextState))) {
-                        case 1:
-                            transitionMatrix[previous][current][next] = 1.0f * nextState.likelihood();
-                            break;
-
-                        case 2:
-                            transitionMatrix[previous][current][next] = 0.6f * nextState.likelihood();
-                            break;
-
-                        case 3:
-                            transitionMatrix[previous][current][next] = 0.3f * nextState.likelihood();
-                            break;
-                    }
-
-                    if (!isMonotonic(previousState, currentState, nextState)) {
-                        transitionMatrix[previous][current][next] *= 0.3f;
-                    }
-
-                    if (currentState.downfallCondition.type == WeatherCondition.DownfallCondition.Type.NONE
-                        && nextState.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE) {
-                        transitionMatrix[previous][current][next] *= 0.3f; //Because we don't like constant rain
-                    }
-                    if (toInt(currentState.downfallCondition.amount) < toInt(nextState.downfallCondition.amount)) {
-                        transitionMatrix[previous][current][next] *= 1.8f; //Because we don't like constant rain
-     }
-                }
-            }
-        }
-
-        return transitionMatrix;
-    }
-
-    private static boolean isMonotonic(final WeatherCondition previous, final WeatherCondition current, final WeatherCondition next) {
-        return isMonotonic(previous.downfallCondition.amount, current.downfallCondition.amount, next.downfallCondition.amount)
-               && isMonotonic(previous.cloudiness, current.cloudiness, next.cloudiness)
-               && !(previous.downfallCondition.withThunder && !current.downfallCondition.withThunder && next.downfallCondition.withThunder);
-    }
-
-    private static boolean isMonotonic(final WeatherCondition.Severity previous, final WeatherCondition.Severity current, final WeatherCondition.Severity next) {
-        return toInt(previous) <= toInt(current) && toInt(current) <= toInt(next)
-           ||  toInt(previous) >= toInt(current) && toInt(current) >= toInt(next);
-    }
-
-    private static int transitionDelta(final WeatherCondition from, final WeatherCondition to) {
-        return  Math.abs(difference(from.cloudiness, to.cloudiness)) +
-                Math.abs(difference(from.downfallCondition.amount, to.downfallCondition.amount)) +
-                ((from.downfallCondition.type != to.downfallCondition.type
-                     && from.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE
-                     && to.downfallCondition.type != WeatherCondition.DownfallCondition.Type.NONE) ? 2 : 0) +
-                ((from.downfallCondition.withThunder != to.downfallCondition.withThunder) ? 2 : 0);
-
-    }
-
-//    private static int transitionDelta(final WeatherCondition.DownfallCondition from, final WeatherCondition.DownfallCondition to) {
-//        int delta = difference(from.amount, to.amount);
-//
-//        if(from.amount != WeatherCondition.Severity.NONE && to.amount != WeatherCondition.Severity.NONE &&
-//                from.type != to.type) {
-//            delta += 2;
-//        }
-//
-//        return delta;
-//    }
-
-    private static int difference(final WeatherCondition.Severity left, final WeatherCondition.Severity right) {
-        return toInt(left) - toInt(right);
-    }
-
-    private static int toInt(final WeatherCondition.Severity severity) {
-        switch (severity) {
-            case NONE:
-                return 0;
-            case LIGHT:
-                return 1;
-            case MODERATE:
-                return 2;
-            case HEAVY:
-                return 3;
-            default:
-                throw new IllegalArgumentException("No case for " + severity);
+        for (int i = 0; i < 8; i++) {
+            getNext();
         }
     }
 
@@ -151,18 +176,39 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
     }
 
     private float randomDuration(WeatherCondition condition) {
-        double duration = randomNumberGenerator.nextGaussian();
+        double duration = Math.abs(randomNumberGenerator.nextGaussian(meanDuration, meanDuration / 2));
 
-        if (condition.downfallCondition.amount != WeatherCondition.Severity.NONE) {
-            duration /= 3.0;
-        }
-
-        return (float) duration * durationScale;
+        return (float) duration;
     }
 
     @Override
     public ConditionAndDuration getNext() {
-        final WeatherCondition condition = weatherMarkovChain.next();
+        // update cloud chain
+        int nextCloud =
+                cloudinessGenerator.getNext(randomNumberGenerator.nextFloat(), cloudinessHistory[0], cloudinessHistory[1]);
+
+        cloudinessHistory[0] = cloudinessHistory[1];
+        cloudinessHistory[1] = nextCloud;
+
+
+        // update precipitation chain
+        int nextPrecipitation =
+                precipitationGenerator.getNext(randomNumberGenerator.nextFloat(), cloudinessHistory[0], cloudinessHistory[1], precipitationHistory[0], precipitationHistory[1]);
+
+        precipitationHistory[0] = precipitationHistory[1];
+        precipitationHistory[1] = nextPrecipitation;
+
+
+        // update wind state
+        previousWind = nextWindCondition();
+
+        // now put generated values into a WeatherCondition object
+        DownfallCondition downfallCondition =
+                nextPrecipitation == 0
+                        ? DownfallCondition.NO_DOWNFALL
+                        : DownfallCondition.get(SEVERITIES.get(nextPrecipitation), DownfallCondition.DownfallType.RAIN, false);
+
+        final WeatherCondition condition = new WeatherCondition(Severity.values()[nextCloud], downfallCondition, previousWind);
 
         return new ConditionAndDuration(
                 condition,

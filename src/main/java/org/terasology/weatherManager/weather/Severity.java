@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 MovingBlocks
+ * Copyright 2015 MovingBlocks
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,24 @@
 package org.terasology.weatherManager.weather;
 
 /**
- * Created by Linus on 5-11-2014.
- */
-//package private
-abstract class ProbabilisticEvent {
+* Created by Linus on 15-2-2015.
+*/
+public enum Severity {
+    NONE("none",  0.00f),
+    LIGHT("light", 0.33f),
+    MODERATE("moderate", 0.66f),
+    HEAVY("heavy", 1.00f);
 
-    public static final float COMMON        = 1.0f;
-    public static final float UNCOMMON      = 0.6f;
-    public static final float VERY_UNCOMMON = 0.3f;
-    public static final float RARE          = 0.1f;
-    public static final float IMPOSSIBLE    = 0.0f;
+    private final String string;
+    private final float numericValue;
 
-    protected final float likelihood;
-
-    protected ProbabilisticEvent(final float likelihood) {
-        this.likelihood = likelihood;
+    private Severity(String string, float numericValue) {
+        this.string = string;
+        this.numericValue = numericValue;
     }
 
-    protected final boolean isPossible() {
-        return likelihood > 0f;
+    @Override
+    public String toString() {
+        return string;
     }
 }

@@ -26,7 +26,7 @@ public class WeatherConditionTest {
 
     @Test
     public void printNrOfDownfallConditions() {
-        MarkovChainWeatherGenerator markovChainWeatherGenerator = new MarkovChainWeatherGenerator(3456, WorldTime.DAY_LENGTH);
+        MarkovChainWeatherGenerator markovChainWeatherGenerator = new MarkovChainWeatherGenerator(3456, 6.0f);
 
         //warm up
         for (int i = 0; i < 100; i++) {
