@@ -16,7 +16,7 @@
 
 package org.terasology.weatherManager.clouds;
 
-import org.terasology.registry.CoreRegistry;
+import org.terasology.registry.In;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
 import org.terasology.world.chunks.CoreChunk;
@@ -26,16 +26,17 @@ import org.terasology.world.generator.plugin.RegisterPlugin;
 
 /**
  * Rasterizes {@link CloudFacet} data onto a given chunk
- * @author Martin Steiger
  */
 @RegisterPlugin
 public class CloudRasterizer implements WorldRasterizerPlugin {
+
+    @In
+    BlockManager blockManager;
 
     private Block cloudBlock;
 
     @Override
     public void initialize() {
-        BlockManager blockManager = CoreRegistry.get(BlockManager.class);
         cloudBlock = blockManager.getBlock("WeatherManager:Cloud");
     }
 
@@ -71,12 +72,12 @@ public class CloudRasterizer implements WorldRasterizerPlugin {
      */
     public Block getBlock(boolean isClouded, Block oldBlock) {
 
-        if (isClouded && oldBlock.equals(BlockManager.getAir())) {
+        if (isClouded && oldBlock.equals(blockManager.getBlock(BlockManager.AIR_ID))) {
             return cloudBlock;
         }
 
         if (!isClouded && oldBlock.equals(cloudBlock)) {
-            return BlockManager.getAir();
+            return blockManager.getBlock(BlockManager.AIR_ID);
         }
 
         return oldBlock;
