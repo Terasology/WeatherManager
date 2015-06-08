@@ -1,8 +1,8 @@
 {
     "id" : "WeatherManager",
-    "version" : "0.1.0",
+    "version" : "0.1.1-SNAPSHOT",
     "displayName" : "Weather Manager",
-    "author" : "Linus van Elswijk",
+    "author" : "Linus van Elswijk, msteiger",
     "description" : "This module adds weather to the game",
     "dependencies" : [
         { "id" : "MarkovChains",
