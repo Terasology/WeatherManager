@@ -16,7 +16,7 @@
 
 package org.terasology.weatherManager.clouds;
 
-import org.terasology.math.Rect2i;
+import org.terasology.math.geom.Rect2i;
 import org.terasology.registry.CoreRegistry;
 import org.terasology.utilities.procedural.BrownianNoise3D;
 import org.terasology.utilities.procedural.PerlinNoise;
