@@ -16,6 +16,7 @@
 
 package org.terasology.weatherManager.clouds;
 
+import org.terasology.registry.CoreRegistry;
 import org.terasology.registry.In;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
@@ -30,13 +31,16 @@ import org.terasology.world.generator.plugin.RegisterPlugin;
 @RegisterPlugin
 public class CloudRasterizer implements WorldRasterizerPlugin {
 
-    @In
+    // TODO: As of 2016-05-31 this fails to result in anything but null. Other places work. Related to this being used in world gen maybe?
+    //@In // Commented out in favor of the CoreRegistry usage below, which works fine
     BlockManager blockManager;
 
     private Block cloudBlock;
 
     @Override
     public void initialize() {
+        // TODO: Remove / harden initialization when somebody has time to clean this up
+        blockManager = CoreRegistry.get(BlockManager.class);
         cloudBlock = blockManager.getBlock("WeatherManager:Cloud");
     }
 
