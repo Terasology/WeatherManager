@@ -16,24 +16,27 @@
 
 package org.terasology.weatherManager.systems;
 
-import java.math.RoundingMode;
-
+import com.google.common.math.DoubleMath;
 import org.slf4j.LoggerFactory;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
-import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
+import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
+import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
+import org.terasology.weatherManager.weather.DownfallCondition;
+import org.terasology.weatherManager.weather.Severity;
+import org.terasology.weatherManager.weather.WeatherCondition;
 import org.terasology.world.time.WorldTime;
 
-import com.google.common.math.DoubleMath;
+import java.math.RoundingMode;
 
-@RegisterSystem(RegisterMode.AUTHORITY)
+@RegisterSystem
 public class WeatherManagerSystem extends BaseComponentSystem {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
@@ -41,6 +44,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     private WeatherConditionProvider weatherConditionProvider;
 
     private ConditionAndDuration current;
+    private EntityRef weatherEntity;
 
     @In
     private EntityManager entityManager;
@@ -51,20 +55,42 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     @In
     private WorldTime worldTime;
 
+    @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
+    public String makeRain() {
+        WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.RAIN, false),new Vector2f(0, 0));
+        logger.info("condition and duration: "+weatherCondition);
+        ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, 10000);
+        logger.info("condition and duration: "+conditionAndDuration);
+        changeWeather(conditionAndDuration);
+        return "it is now raining.";
+    }
 
     @Override
     public void postBegin() {
+        logger.info("UPDATED!");
         logger.info("Initializing WeatherManSystem");
 
         float avglength = WorldTime.DAY_LENGTH / 480.0f;// / 48.0f; // worldTime.getTimeRate(); -- not available for modules
         weatherConditionProvider = new MarkovChainWeatherGenerator(12354, avglength);
         current = weatherConditionProvider.getNext();
 
-        EntityRef weatherEntity = entityManager.create();
+        weatherEntity = entityManager.create();
 
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
 
+        logger.info("Current weather: " + current.condition + " (" + current.duration + ")");
+    }
+
+    /*
+      *for changing weather on command
+     */
+    public void changeWeather(ConditionAndDuration conditionAndDuration) {
+        logger.info("changing weather...");
+        current = conditionAndDuration;
+        logger.info("current set");
+        long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
+        delayManager.addDelayedAction(weatherEntity, "Weather", length);
         logger.info("Current weather: " + current.condition + " (" + current.duration + ")");
     }
 
