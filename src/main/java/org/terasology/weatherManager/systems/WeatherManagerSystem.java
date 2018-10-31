@@ -57,7 +57,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain() {
-        WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.RAIN, false),new Vector2f(0, 0));
+        WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.RAIN, false),new Vector2f(.7f, .5f));
         logger.info("condition and duration: "+weatherCondition);
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, 10000);
         logger.info("condition and duration: "+conditionAndDuration);
