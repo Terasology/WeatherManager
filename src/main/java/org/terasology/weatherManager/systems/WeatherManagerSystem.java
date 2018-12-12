@@ -30,6 +30,7 @@ import org.terasology.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.utilities.random.Random;
+import org.terasology.weatherManager.events.StartRainEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;
@@ -42,6 +43,8 @@ import java.math.RoundingMode;
 public class WeatherManagerSystem extends BaseComponentSystem {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
+
+    private static DownfallCondition.DownfallType currentWeather;
 
     private WeatherConditionProvider weatherConditionProvider;
 
@@ -138,6 +141,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         current = conditionAndDuration;
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
+
+        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+
+        weatherEntity.send(new StartRainEvent());
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -153,7 +160,14 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         current = weatherConditionProvider.getNext();
 
-        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
+        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
 
+        worldEntity.send(new StartRainEvent());
+
+        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
+    }
+
+    public static DownfallCondition.DownfallType getCurrentWeather() {
+        return currentWeather;
     }
 }

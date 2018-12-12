@@ -1,0 +1,27 @@
+{
+  "location": {},
+  "particleDataSprite": {
+    "texture": "WeatherManager:rain"
+  },
+  "energyRangeGenerator": {
+    "minEnergy": 45,
+    "maxEnergy": 45
+  },
+  "scaleRangeGenerator": {
+    "minScale": [1, 1, 1],
+    "maxScale": [1, 1, 1]
+  },
+  "velocityRangeGenerator": {
+    "minVelocity": [0, -2, 0],
+    "maxVelocity": [0, -4, 0]
+  },
+  "velocityAffector": {},
+  "particleEmitter": {
+    "spawnRateMax": 3,
+    "spawnRateMin": 1,
+    "maxParticles": 100,
+    "particleCollision": false,
+    "destroyEntityWhenDead": true
+  },
+  "network": {}
+}
