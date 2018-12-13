@@ -29,8 +29,7 @@ import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
-import org.terasology.utilities.random.Random;
-import org.terasology.weatherManager.events.StartRainEvent;
+import org.terasology.weatherManager.events.StartWeatherEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;
@@ -51,6 +50,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     private ConditionAndDuration current;
     private EntityRef weatherEntity;
 
+    private static Vector2f currentWind;
+    private static Severity severity;
+
     @In
     private EntityManager entityManager;
 
@@ -62,8 +64,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / (int)(Math.random() * 10);
-        float windY = (float) Math.random() / (int)(Math.random() * 10);
+        //TODO: figure out why getting infinity
+        float windX = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
+        float windY = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
         if (Math.random() > .5) {
             windX *= -1;
         }
@@ -79,8 +82,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it snow", helpText = "Changes the weather to snowing for some time")
     public String makeSnow(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / (int)(Math.random() * 10);
-        float windY = (float) Math.random() / (int)(Math.random() * 10);
+        float windX = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
+        float windY = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
         if (Math.random() > .5) {
             windX *= -1;
         }
@@ -96,8 +99,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it hail", helpText = "Changes the weather to hailing for some time")
     public String makeHail(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / (int)(Math.random() * 10);
-        float windY = (float) Math.random() / (int)(Math.random() * 10);
+        float windX = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
+        float windY = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
         if (Math.random() > .5) {
             windX *= -1;
         }
@@ -143,8 +146,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
 
         currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+        severity = current.condition.downfallCondition.getDownfallValues().amount;
+        currentWind = current.condition.wind;
 
-        weatherEntity.send(new StartRainEvent());
+        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
+
+        weatherEntity.send(new StartWeatherEvent());
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -161,8 +168,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         current = weatherConditionProvider.getNext();
 
         currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+        severity = current.condition.downfallCondition.getDownfallValues().amount;
+        currentWind = current.condition.wind;
 
-        worldEntity.send(new StartRainEvent());
+        worldEntity.send(new StartWeatherEvent());
 
         logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
     }
@@ -170,4 +179,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static DownfallCondition.DownfallType getCurrentWeather() {
         return currentWeather;
     }
+    public static Vector2f getCurrentWind() { return currentWind; }
+    public static Severity getCurrentSeverity() { return severity; }
 }

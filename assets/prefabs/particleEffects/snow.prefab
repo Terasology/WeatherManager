@@ -1,7 +1,7 @@
 {
   "location": {},
   "particleDataSprite": {
-    "texture": "WeatherManager:rain"
+    "texture": "WeatherManager:snow"
   },
   "energyRangeGenerator": {
     "minEnergy": 45,
