@@ -12,8 +12,8 @@
     "maxScale": [1, 1, 1]
   },
   "velocityRangeGenerator": {
-    "minVelocity": [0, -2, 0],
-    "maxVelocity": [0, -4, 0]
+    "minVelocity": [0, -3, 0],
+    "maxVelocity": [0, -5, 0]
   },
   "velocityAffector": {},
   "particleEmitter": {
