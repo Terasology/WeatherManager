@@ -43,7 +43,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-//TODO: possibly change distance between particles
 //TODO: destroy on contact with blocks?
 
 @RegisterSystem

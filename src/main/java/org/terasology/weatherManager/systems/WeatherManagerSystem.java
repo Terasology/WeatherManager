@@ -64,9 +64,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
-        //TODO: figure out why getting infinity
-        float windX = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
-        float windY = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
+        float windX = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
+        float windY = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
         if (Math.random() > .5) {
             windX *= -1;
         }
@@ -82,8 +81,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it snow", helpText = "Changes the weather to snowing for some time")
     public String makeSnow(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
-        float windY = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
+        float windX = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
+        float windY = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
         if (Math.random() > .5) {
             windX *= -1;
         }
@@ -99,8 +98,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it hail", helpText = "Changes the weather to hailing for some time")
     public String makeHail(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
-        float windY = (float) Math.random() / Math.min((int) (Math.random() * 10), 1);
+        float windX = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
+        float windY = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
         if (Math.random() > .5) {
             windX *= -1;
         }
