@@ -51,6 +51,7 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
 
     private final int SIZE_OF_PARTICLE_AREA = 24;
     private final int BUFFER_AMOUNT = 5;
+    private final int CLOUD_HEIGHT = 127;
 
     private String prefabName;
 
@@ -147,16 +148,23 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
 
                 if (dif.x != 0) {
                     if (dif.x > 0) {
-                        refreshParticles(true, true);
+                        refreshParticles(true, false, true);
                     } else {
-                        refreshParticles(true, false);
+                        refreshParticles(true, false,false);
                     }
                 }
                 if (dif.z != 0) {
                     if (dif.z > 0) {
-                        refreshParticles(false, true);
+                        refreshParticles(false, true,true);
                     } else {
-                        refreshParticles(false, false);
+                        refreshParticles(false, true,false);
+                    }
+                }
+                if (dif.y != 0) {
+                    if (dif.y > 0) {
+                        refreshParticles(false, false,false);
+                    } else {
+                        refreshParticles(false, true,false);
                     }
                 }
             }
@@ -179,16 +187,17 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
     /**
      * Refreshes the location of the particle emitting entities (to move if necessary).
      * @param x If the player moved on the x axis.
+     * @param z If the player moved on the z axis.
      * @param positive If the player moved in a positive or negative direction.
      */
-    private void refreshParticles(boolean x, boolean positive) {
+    private void refreshParticles(boolean x, boolean z, boolean positive) {
 
         ArrayList<Vector2f> remove = new ArrayList<>();
 
         for(Vector2f vect : particleSpawners.keySet()) {
             float distX = vect.distance(new Vector2f(center.x, vect.y));
-            float distY = vect.distance(new Vector2f(vect.x, center.z));
-            if (distX > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT || distY > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT) {
+            float distZ = vect.distance(new Vector2f(vect.x, center.z));
+            if (distX > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT || distZ > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT) {
                 remove.add(vect);
                 if (builders.containsKey(vect)) {
                     particleSpawners.get(vect).destroy();
@@ -220,17 +229,19 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
             for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
                 Vector3f loc_emitter = new Vector3f(center);
 
+                loc_emitter.addY(Math.min(CLOUD_HEIGHT, (float) SIZE_OF_PARTICLE_AREA / 3));
+
                 if (x) {
                     if (positive) {
-                        loc_emitter.add(-Math.round((float) SIZE_OF_PARTICLE_AREA / 2) - i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
+                        loc_emitter.add(-Math.round((float) SIZE_OF_PARTICLE_AREA / 2) - i, 0, j);
                     } else {
-                        loc_emitter.add(Math.round((float) SIZE_OF_PARTICLE_AREA / 2) + i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
+                        loc_emitter.add(Math.round((float) SIZE_OF_PARTICLE_AREA / 2) + i, 0, j);
                     }
-                } else {
+                } else if (z) {
                     if (positive) {
-                        loc_emitter.add(j, (float) SIZE_OF_PARTICLE_AREA / 3, -Math.round((float) SIZE_OF_PARTICLE_AREA / 2 - i));
+                        loc_emitter.add(j, 0, -Math.round((float) SIZE_OF_PARTICLE_AREA / 2 - i));
                     } else {
-                        loc_emitter.add(j, (float) SIZE_OF_PARTICLE_AREA / 3, Math.round((float) SIZE_OF_PARTICLE_AREA / 2 + i));
+                        loc_emitter.add(j, 0, Math.round((float) SIZE_OF_PARTICLE_AREA / 2 + i));
                     }
                 }
 
