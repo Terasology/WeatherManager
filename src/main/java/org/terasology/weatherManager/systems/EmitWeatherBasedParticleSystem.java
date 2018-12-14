@@ -16,8 +16,6 @@
 
 package org.terasology.weatherManager.systems;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.terasology.entitySystem.entity.EntityBuilder;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
@@ -39,6 +37,7 @@ import org.terasology.weatherManager.weather.Severity;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.BlockManager;
 
+import java.nio.file.WatchEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,11 +63,14 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
     @In
     private EntityManager entityManager;
 
-    private Logger logger = LoggerFactory.getLogger(EmitWeatherBasedParticleSystem.class);
-
     private int minDownfall;
     private int maxDownfall;
 
+    /**
+     * Prepares particle spawners, builders, and sets player.
+     * @param event The OnPlayerSpawned event that was received.
+     * @param character The player entity.
+     */
     @ReceiveEvent
     public void onPlayerSpawn(OnPlayerSpawnedEvent event, EntityRef character) {
         particleSpawners = new HashMap<>();
@@ -76,11 +78,21 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
         player = character;
     }
 
+    /**
+     * Resets player.
+     * @param event The OnPlayerRespawned event that was received.
+     * @param character The player entity.
+     */
     @ReceiveEvent
     public void onPlayerRespawn(OnPlayerRespawnedEvent event, EntityRef character) {
         player = character;
     }
 
+    /**
+     * Begins making the process of visual effects for weather.
+     * @param event The StartWeatherEvent that was recieved.
+     * @param worldEntity The entity that sent the event.
+     */
     @ReceiveEvent
     public void onStartWeatherEvent(StartWeatherEvent event, EntityRef worldEntity) {
 
@@ -100,7 +112,6 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
 
         if (player != null) {
             DownfallCondition.DownfallType weather = WeatherManagerSystem.getCurrentWeather();
-            logger.info("weather: "+weather);
 
             if (weather.equals(DownfallCondition.DownfallType.RAIN)) {
                 prefabName = "WeatherManager:rain";
@@ -117,6 +128,11 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
         }
     }
 
+    /**
+     * Moves the visual effects with the player.
+     * @param event The MovedEvent.
+     * @param character The entity that sent the MoveEvent.
+     */
     @ReceiveEvent
     public void onCharacterMoved(MovedEvent event, EntityRef character) {
 
@@ -147,6 +163,11 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
         }
     }
 
+    /**
+     * Rounds a vector.
+     * @param original The original vector.
+     * @return The original vector rounded to be whole numbers.
+     */
     private Vector3f round (Vector3f original) {
         original.x = Math.round(original.x);
         original.y = Math.round(original.y);
@@ -155,6 +176,11 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
         return original;
     }
 
+    /**
+     * Refreshes the location of the particle emitting entities (to move if necessary).
+     * @param x If the player moved on the x axis.
+     * @param positive If the player moved in a positive or negative direction.
+     */
     private void refreshParticles(boolean x, boolean positive) {
 
         ArrayList<Vector2f> remove = new ArrayList<>();
@@ -181,7 +207,13 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
             particleSpawners.remove(toRemove);
         }
 
-        Vector3f maxVelocity = new Vector3f(Math.min(.25f, WeatherManagerSystem.getCurrentWind().x * 10), maxDownfall, Math.min(.25f, WeatherManagerSystem.getCurrentWind().x * 10));
+        Vector3f maxVelocity = new Vector3f(Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().x * 10)), maxDownfall, Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().y * 10)));
+        if (WeatherManagerSystem.getCurrentWind().x < 0) {
+            maxVelocity.x *= -1;
+        }
+        if (WeatherManagerSystem.getCurrentWind().x < 0) {
+            maxVelocity.z *= -1;
+        }
         Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
 
         for (int i = 0; i < BUFFER_AMOUNT; i++) {
@@ -215,6 +247,9 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
         }
     }
 
+    /**
+     * Resets builders and particleSpawners, and destroys current entities.
+     */
     private void clearEmitters() {
         for (EntityRef ref : particleSpawners.values()) {
             ref.destroy();
@@ -224,6 +259,9 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
         particleSpawners = new HashMap<>();
     }
 
+    /**
+     * Creates new particle emitters based on the location of the player.
+     */
     private void makeNewParticleEmitters() {
 
         clearEmitters();
@@ -232,7 +270,13 @@ public class EmitWeatherBasedParticleSystem extends BaseComponentSystem {
 
         center = baseLoc;
 
-        Vector3f maxVelocity = new Vector3f(Math.min(.25f, WeatherManagerSystem.getCurrentWind().x * 10), maxDownfall, Math.min(.25f, WeatherManagerSystem.getCurrentWind().x * 10));
+        Vector3f maxVelocity = new Vector3f(Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().x * 10)), maxDownfall, Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().y * 10)));
+        if (WeatherManagerSystem.getCurrentWind().x < 0) {
+            maxVelocity.x *= -1;
+        }
+        if (WeatherManagerSystem.getCurrentWind().x < 0) {
+            maxVelocity.z *= -1;
+        }
         Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
 
         for (int i = -SIZE_OF_PARTICLE_AREA / 2; i < SIZE_OF_PARTICLE_AREA / 2; i++) {

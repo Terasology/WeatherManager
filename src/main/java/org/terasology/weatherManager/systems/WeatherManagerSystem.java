@@ -178,6 +178,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static DownfallCondition.DownfallType getCurrentWeather() {
         return currentWeather;
     }
-    public static Vector2f getCurrentWind() { return currentWind; }
-    public static Severity getCurrentSeverity() { return severity; }
+    public static Vector2f getCurrentWind() {
+        return currentWind;
+    }
+    public static Severity getCurrentSeverity() {
+        return severity;
+    }
 }
