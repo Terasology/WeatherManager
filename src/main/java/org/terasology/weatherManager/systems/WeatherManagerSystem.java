@@ -131,6 +131,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         weatherEntity = entityManager.create();
 
+        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+        severity = current.condition.downfallCondition.getDownfallValues().amount;
+        currentWind = current.condition.wind;
+
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
     }
