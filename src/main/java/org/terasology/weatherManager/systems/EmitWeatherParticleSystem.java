@@ -16,11 +16,9 @@
 
 package org.terasology.weatherManager.systems;
 
-import org.slf4j.LoggerFactory;
 import org.terasology.entitySystem.entity.EntityBuilder;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
-import org.terasology.entitySystem.entity.internal.EntityScope;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;
@@ -41,17 +39,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-//TODO: destroy on contact with blocks?
+//TODO: destroy on contact with blocks (water)
 
 @RegisterSystem
 public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
-    private EntityRef player;
+    private static final String IS_SUNNY = "sunny";
+    private static final int SIZE_OF_PARTICLE_AREA = 24;
+    private static final int BUFFER_AMOUNT = 5;
+    private static final int CLOUD_HEIGHT = 127;
 
-    private final int SIZE_OF_PARTICLE_AREA = 24;
-    private final int BUFFER_AMOUNT = 5;
-    private final int CLOUD_HEIGHT = 127;
-    private final String IS_SUNNY = "sunny";
+    private EntityRef player;
 
     private String prefabName;
 
@@ -81,20 +79,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onPlayerSpawn(OnPlayerSpawnedEvent event, EntityRef character) {
         player = character;
-        /*
-        int destroyed = 0;
-        for (EntityRef ref : entityManager.getAllEntities()) {
-            if (ref.getParentPrefab() != null) {
-                LoggerFactory.getLogger("").info("PARENT: "+ref.getParentPrefab());
-                Prefab parent = ref.getParentPrefab();
-                if (parent.getName().equals("WeatherManager:hail") || parent.getName().equals("WeatherManager:snow") || parent.getName().equals("WeatherManager:rain")) {
-                    destroyed++;
-                    ref.destroy();
-                    LoggerFactory.getLogger("").info("YAY FOR: "+parent.getName());
-                }
-            }
-        }
-        LoggerFactory.getLogger("").info("DESTROYING: "+destroyed);*/
         setPrefabName();
     }
 
@@ -149,21 +133,21 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     if (dif.x > 0) {
                         refreshParticles(true, false, true);
                     } else {
-                        refreshParticles(true, false,false);
+                        refreshParticles(true, false, false);
                     }
                 }
                 if (dif.z != 0) {
                     if (dif.z > 0) {
-                        refreshParticles(false, true,true);
+                        refreshParticles(false, true, true);
                     } else {
-                        refreshParticles(false, true,false);
+                        refreshParticles(false, true, false);
                     }
                 }
                 if (dif.y != 0) {
                     if (dif.y > 0) {
-                        refreshParticles(false, false,false);
+                        refreshParticles(false, false, false);
                     } else {
-                        refreshParticles(false, true,false);
+                        refreshParticles(false, true, false);
                     }
                 }
             }
@@ -175,7 +159,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      * @param original The original vector.
      * @return The original vector rounded to be whole numbers.
      */
-    private Vector3f round (Vector3f original) {
+    private Vector3f round(Vector3f original) {
         original.x = Math.round(original.x);
         original.y = Math.round(original.y);
         original.z = Math.round(original.z);
@@ -216,7 +200,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 particleSpawners.remove(toRemove);
             }
 
-            Vector3f maxVelocity = new Vector3f(Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().x * 10)), maxDownfall, Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().y * 10)));
+            float windXAbs = Math.abs(WeatherManagerSystem.getCurrentWind().x * 10);
+            float windYAbs = Math.abs(WeatherManagerSystem.getCurrentWind().y * 10);
+            Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
             if (WeatherManagerSystem.getCurrentWind().x < 0) {
                 maxVelocity.x *= -1;
             }
@@ -227,35 +213,33 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
             for (int i = 0; i < BUFFER_AMOUNT; i++) {
                 for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
-                    Vector3f loc_emitter = new Vector3f(center);
+                    Vector3f locEmitter = new Vector3f(center);
 
-                    loc_emitter.addY(Math.min(CLOUD_HEIGHT, (float) SIZE_OF_PARTICLE_AREA / 3));
+                    locEmitter.addY(Math.min(CLOUD_HEIGHT, (float) SIZE_OF_PARTICLE_AREA / 3));
 
                     if (x) {
                         if (positive) {
-                            loc_emitter.add(-Math.round((float) SIZE_OF_PARTICLE_AREA / 2) - i, 0, j);
+                            locEmitter.add(-Math.round((float) SIZE_OF_PARTICLE_AREA / 2) - i, 0, j);
                         } else {
-                            loc_emitter.add(Math.round((float) SIZE_OF_PARTICLE_AREA / 2) + i, 0, j);
+                            locEmitter.add(Math.round((float) SIZE_OF_PARTICLE_AREA / 2) + i, 0, j);
                         }
                     } else if (z) {
                         if (positive) {
-                            loc_emitter.add(j, 0, -Math.round((float) SIZE_OF_PARTICLE_AREA / 2 - i));
+                            locEmitter.add(j, 0, -Math.round((float) SIZE_OF_PARTICLE_AREA / 2 - i));
                         } else {
-                            loc_emitter.add(j, 0, Math.round((float) SIZE_OF_PARTICLE_AREA / 2 + i));
+                            locEmitter.add(j, 0, Math.round((float) SIZE_OF_PARTICLE_AREA / 2 + i));
                         }
                     }
 
-                    if (!particleSpawners.containsKey(new Vector2f(loc_emitter.x, loc_emitter.z))) {
+                    if (!particleSpawners.containsKey(new Vector2f(locEmitter.x, locEmitter.z))) {
                         EntityBuilder builder = entityManager.newBuilder(prefabName);
-                        builder.getComponent(LocationComponent.class).setWorldPosition(loc_emitter);
+                        builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                        //builder.setScope(EntityScope.GLOBAL);
                         builder.setPersistent(true);
-                        //builder.addComponent(new EmitWeatherParticleComponent());
                         EntityRef ref = builder.build();
-                        particleSpawners.put(new Vector2f(loc_emitter.x, loc_emitter.z), ref);
-                        builders.put(new Vector2f(loc_emitter.x, loc_emitter.z), builder);
+                        particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
+                        builders.put(new Vector2f(locEmitter.x, locEmitter.z), builder);
                     }
                 }
             }
@@ -267,33 +251,17 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     private void clearEmitters() {
         if (entityManager != null) {
-            //for (EntityRef ref : entityManager.getAllEntities()) {
             for (EntityRef ref : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
                 if (ref.getParentPrefab() != null) {
                     boolean isRain = ref.getParentPrefab().equals(entityManager.getPrefabManager().getPrefab("WeatherManager:rain"));
                     boolean isSnow = ref.getParentPrefab().equals(entityManager.getPrefabManager().getPrefab("WeatherManager:snow"));
                     boolean isHail = ref.getParentPrefab().equals(entityManager.getPrefabManager().getPrefab("WeatherManager:hail"));
                     if (isRain || isSnow || isHail) {
-                        LoggerFactory.getLogger("").info("REF: "+ref);
                         ref.destroy();
                     }
                 }
-                /*
-                if (ref.getParentPrefab() != null) {
-                    LoggerFactory.getLogger("").info("PARENT: " + ref.getParentPrefab());
-                    Prefab parent = ref.getParentPrefab();
-                    if (parent.getName().equals("WeatherManager:hail") || parent.getName().equals("WeatherManager:snow") || parent.getName().equals("WeatherManager:rain")) {
-                        destroyed++;
-                        ref.destroy();
-                        LoggerFactory.getLogger("").info("YAY FOR: " + parent.getName());
-                    }
-                }*/
             }
         }
-        /*
-        for (EntityRef ref : particleSpawners.values()) {
-            ref.destroy();
-        }*/
 
         builders = new HashMap<>();
         particleSpawners = new HashMap<>();
@@ -310,7 +278,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
         center = baseLoc;
 
-        Vector3f maxVelocity = new Vector3f(Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().x * 10)), maxDownfall, Math.min(1.5f, Math.abs(WeatherManagerSystem.getCurrentWind().y * 10)));
+        float windXAbs = Math.abs(WeatherManagerSystem.getCurrentWind().x * 10);
+        float windYAbs = Math.abs(WeatherManagerSystem.getCurrentWind().y * 10);
+        Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
         if (WeatherManagerSystem.getCurrentWind().x < 0) {
             maxVelocity.x *= -1;
         }
@@ -321,21 +291,19 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
         for (int i = -SIZE_OF_PARTICLE_AREA / 2; i < SIZE_OF_PARTICLE_AREA / 2; i++) {
             for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
-                Vector3f loc_emitter = new Vector3f(baseLoc.x, baseLoc.y, baseLoc.z);
-                loc_emitter.add(i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
+                Vector3f locEmitter = new Vector3f(baseLoc.x, baseLoc.y, baseLoc.z);
+                locEmitter.add(i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
 
                 EntityBuilder builder = entityManager.newBuilder(prefabName);
 
                 builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
                 builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                builder.getComponent(LocationComponent.class).setWorldPosition(loc_emitter);
+                builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
                 builder.setPersistent(true);
-                //builder.setScope(EntityScope.GLOBAL);
 
-                //builder.addComponent(new EmitWeatherParticleComponent());
                 EntityRef ref = builder.build();
-                particleSpawners.put(new Vector2f(loc_emitter.x, loc_emitter.z), ref);
-                builders.put(new Vector2f(loc_emitter.x, loc_emitter.z), builder);
+                particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
+                builders.put(new Vector2f(locEmitter.x, locEmitter.z), builder);
             }
         }
     }

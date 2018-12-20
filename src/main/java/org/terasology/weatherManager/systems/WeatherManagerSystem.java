@@ -41,6 +41,9 @@ import java.math.RoundingMode;
 @RegisterSystem
 public class WeatherManagerSystem extends BaseComponentSystem {
 
+    private static Vector2f currentWind;
+    private static Severity severity;
+
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
 
     private static DownfallCondition.DownfallType currentWeather;
@@ -49,9 +52,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     private ConditionAndDuration current;
     private EntityRef weatherEntity;
-
-    private static Vector2f currentWind;
-    private static Severity severity;
 
     @In
     private EntityManager entityManager;
@@ -143,7 +143,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * For changing weather on command.
      * @param conditionAndDuration The ConditionAndDuration for the new weather.
      */
-    public void changeWeather(ConditionAndDuration conditionAndDuration) {
+    private void changeWeather(ConditionAndDuration conditionAndDuration) {
         current = conditionAndDuration;
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
