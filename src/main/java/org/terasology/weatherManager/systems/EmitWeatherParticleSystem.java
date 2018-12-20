@@ -250,7 +250,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                         builder.getComponent(LocationComponent.class).setWorldPosition(loc_emitter);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                        builder.setScope(EntityScope.GLOBAL);
+                        //builder.setScope(EntityScope.GLOBAL);
                         builder.setPersistent(true);
                         //builder.addComponent(new EmitWeatherParticleComponent());
                         EntityRef ref = builder.build();
@@ -330,7 +330,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
                 builder.getComponent(LocationComponent.class).setWorldPosition(loc_emitter);
                 builder.setPersistent(true);
-                builder.setScope(EntityScope.GLOBAL);
+                //builder.setScope(EntityScope.GLOBAL);
 
                 //builder.addComponent(new EmitWeatherParticleComponent());
                 EntityRef ref = builder.build();
