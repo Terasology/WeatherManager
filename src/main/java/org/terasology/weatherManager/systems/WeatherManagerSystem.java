@@ -29,7 +29,7 @@ import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
-import org.terasology.utilities.random.Random;
+import org.terasology.weatherManager.events.StartWeatherEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;
@@ -41,7 +41,12 @@ import java.math.RoundingMode;
 @RegisterSystem
 public class WeatherManagerSystem extends BaseComponentSystem {
 
+    private static Vector2f currentWind;
+    private static Severity severity;
+
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
+
+    private static DownfallCondition.DownfallType currentWeather;
 
     private WeatherConditionProvider weatherConditionProvider;
 
@@ -126,6 +131,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         weatherEntity = entityManager.create();
 
+        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+        severity = current.condition.downfallCondition.getDownfallValues().amount;
+        currentWind = current.condition.wind;
+
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
     }
@@ -134,10 +143,18 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * For changing weather on command.
      * @param conditionAndDuration The ConditionAndDuration for the new weather.
      */
-    public void changeWeather(ConditionAndDuration conditionAndDuration) {
+    private void changeWeather(ConditionAndDuration conditionAndDuration) {
         current = conditionAndDuration;
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
+
+        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+        severity = current.condition.downfallCondition.getDownfallValues().amount;
+        currentWind = current.condition.wind;
+
+        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
+
+        weatherEntity.send(new StartWeatherEvent());
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -153,7 +170,22 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         current = weatherConditionProvider.getNext();
 
-        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
+        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+        severity = current.condition.downfallCondition.getDownfallValues().amount;
+        currentWind = current.condition.wind;
 
+        worldEntity.send(new StartWeatherEvent());
+
+        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
+    }
+
+    public static DownfallCondition.DownfallType getCurrentWeather() {
+        return currentWeather;
+    }
+    public static Vector2f getCurrentWind() {
+        return currentWind;
+    }
+    public static Severity getCurrentSeverity() {
+        return severity;
     }
 }

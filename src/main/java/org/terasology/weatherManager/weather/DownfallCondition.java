@@ -95,7 +95,7 @@ public final class DownfallCondition {
         }
     }
 
-    private static final class DownfallValues {
+    public static final class DownfallValues {
         public final DownfallType type;
         public final Severity amount;
         public final boolean withThunder;
@@ -139,5 +139,9 @@ public final class DownfallCondition {
                    DownfallType.values().length * amount.ordinal() +
                     DownfallType.values().length * Severity.values().length * (withThunder ? 1 : 0);
         }
+    }
+
+    public DownfallValues getDownfallValues() {
+        return downfallValues;
     }
 }
