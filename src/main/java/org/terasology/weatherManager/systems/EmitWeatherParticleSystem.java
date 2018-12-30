@@ -19,12 +19,12 @@ package org.terasology.weatherManager.systems;
 import org.terasology.entitySystem.entity.EntityBuilder;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
+import org.terasology.entitySystem.entity.lifecycleEvents.OnActivatedComponent;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.location.LocationComponent;
-import org.terasology.logic.players.event.OnPlayerRespawnedEvent;
-import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
+import org.terasology.logic.players.LocalPlayer;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
 import org.terasology.particles.components.ParticleEmitterComponent;
@@ -33,7 +33,6 @@ import org.terasology.physics.events.MovedEvent;
 import org.terasology.registry.In;
 import org.terasology.weatherManager.events.StartWeatherEvent;
 import org.terasology.weatherManager.weather.DownfallCondition;
-import org.terasology.weatherManager.weather.Severity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,8 +48,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final int BUFFER_AMOUNT = 5;
     private static final int CLOUD_HEIGHT = 127;
 
-    private EntityRef player;
-
     private String prefabName;
 
     private Vector3f center;
@@ -59,37 +56,26 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     private Map<Vector2f, EntityBuilder> builders;
 
+    private boolean particlesMade;
+
     @In
     private EntityManager entityManager;
+
+    @In
+    private LocalPlayer localPlayer;
+
+    @In
+    private WeatherManagerSystem weatherManagerSystem;
 
     private int minDownfall;
     private int maxDownfall;
 
     @Override
     public void postBegin() {
+        particlesMade = false;
+
         particleSpawners = new HashMap<>();
         builders = new HashMap<>();
-    }
-
-    /**
-     * Prepares particle spawners, builders, and sets player.
-     * @param event The OnPlayerSpawned event that was received.
-     * @param character The player entity.
-     */
-    @ReceiveEvent
-    public void onPlayerSpawn(OnPlayerSpawnedEvent event, EntityRef character) {
-        player = character;
-        setPrefabName();
-    }
-
-    /**
-     * Resets player.
-     * @param event The OnPlayerRespawned event that was received.
-     * @param character The player entity.
-     */
-    @ReceiveEvent
-    public void onPlayerRespawn(OnPlayerRespawnedEvent event, EntityRef character) {
-        player = character;
         setPrefabName();
     }
 
@@ -101,24 +87,26 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onStartWeatherEvent(StartWeatherEvent event, EntityRef worldEntity) {
 
-        if (player != null) {
+        if (localPlayer.getPosition() != null) {
             clearEmitters();
             setPrefabName();
         }
     }
 
-    /**
+    @ReceiveEvent
+    public void onCharacterActivation(OnActivatedComponent event, EntityRef characterEntity) {
+        if (!particlesMade) {
+            setPrefabName();
+        }
+    }
+
+     /**
      * Moves the visual effects with the player.
      * @param event The MovedEvent.
      * @param character The entity that sent the MoveEvent.
      */
     @ReceiveEvent
     public void onCharacterMoved(MovedEvent event, EntityRef character) {
-        if (player == null) {
-            player = character;
-            clearEmitters();
-            setPrefabName();
-        }
 
         if (center != null) {
             Vector3f pos = round(new Vector3f(event.getPosition()));
@@ -200,13 +188,13 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 particleSpawners.remove(toRemove);
             }
 
-            float windXAbs = Math.abs(WeatherManagerSystem.getCurrentWind().x * 10);
-            float windYAbs = Math.abs(WeatherManagerSystem.getCurrentWind().y * 10);
+            float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
+            float windYAbs = Math.abs(weatherManagerSystem.getCurrentWind().y * 10);
             Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
-            if (WeatherManagerSystem.getCurrentWind().x < 0) {
+            if (weatherManagerSystem.getCurrentWind().x < 0) {
                 maxVelocity.x *= -1;
             }
-            if (WeatherManagerSystem.getCurrentWind().x < 0) {
+            if (weatherManagerSystem.getCurrentWind().y < 0) {
                 maxVelocity.z *= -1;
             }
             Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
@@ -253,9 +241,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         if (entityManager != null) {
             for (EntityRef ref : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
                 if (ref.getParentPrefab() != null) {
-                    boolean isRain = ref.getParentPrefab().equals(entityManager.getPrefabManager().getPrefab("WeatherManager:rain"));
-                    boolean isSnow = ref.getParentPrefab().equals(entityManager.getPrefabManager().getPrefab("WeatherManager:snow"));
-                    boolean isHail = ref.getParentPrefab().equals(entityManager.getPrefabManager().getPrefab("WeatherManager:hail"));
+                    boolean isRain = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:rain");
+                    boolean isSnow = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:snow");
+                    boolean isHail = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:hail");
                     if (isRain || isSnow || isHail) {
                         ref.destroy();
                     }
@@ -272,68 +260,88 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     private void makeNewParticleEmitters() {
 
-        clearEmitters();
+        if (localPlayer.getPosition() != null && weatherManagerSystem.getCurrentWind() != null) {
+            particlesMade = true;
+            clearEmitters();
+            if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
+                Vector3f baseLoc = round(localPlayer.getPosition());
 
-        Vector3f baseLoc = round(player.getComponent(LocationComponent.class).getWorldPosition());
+                center = baseLoc;
 
-        center = baseLoc;
+                float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
+                float windYAbs = Math.abs(weatherManagerSystem.getCurrentWind().y * 10);
+                Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
+                if (weatherManagerSystem.getCurrentWind().x < 0) {
+                    maxVelocity.x *= -1;
+                }
+                if (weatherManagerSystem.getCurrentWind().y < 0) {
+                    maxVelocity.z *= -1;
+                }
+                Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
 
-        float windXAbs = Math.abs(WeatherManagerSystem.getCurrentWind().x * 10);
-        float windYAbs = Math.abs(WeatherManagerSystem.getCurrentWind().y * 10);
-        Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
-        if (WeatherManagerSystem.getCurrentWind().x < 0) {
-            maxVelocity.x *= -1;
-        }
-        if (WeatherManagerSystem.getCurrentWind().x < 0) {
-            maxVelocity.z *= -1;
-        }
-        Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
+                for (int i = -SIZE_OF_PARTICLE_AREA / 2; i < SIZE_OF_PARTICLE_AREA / 2; i++) {
+                    for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
+                        Vector3f locEmitter = new Vector3f(baseLoc.x, baseLoc.y, baseLoc.z);
+                        locEmitter.add(i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
 
-        for (int i = -SIZE_OF_PARTICLE_AREA / 2; i < SIZE_OF_PARTICLE_AREA / 2; i++) {
-            for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
-                Vector3f locEmitter = new Vector3f(baseLoc.x, baseLoc.y, baseLoc.z);
-                locEmitter.add(i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
+                        EntityBuilder builder = entityManager.newBuilder(prefabName);
 
-                EntityBuilder builder = entityManager.newBuilder(prefabName);
+                        builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
+                        builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
+                        builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
+                        builder.setPersistent(true);
 
-                builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
-                builder.setPersistent(true);
-
-                EntityRef ref = builder.build();
-                particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
-                builders.put(new Vector2f(locEmitter.x, locEmitter.z), builder);
+                        EntityRef ref = builder.build();
+                        particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
+                        builders.put(new Vector2f(locEmitter.x, locEmitter.z), builder);
+                    }
+                }
             }
         }
     }
 
     private void setPrefabName() {
-        DownfallCondition.DownfallType weather = WeatherManagerSystem.getCurrentWeather();
+        DownfallCondition.DownfallType weather = weatherManagerSystem.getCurrentWeather();
 
-        maxDownfall = -7;
-        minDownfall = -4;
-        if (WeatherManagerSystem.getCurrentSeverity().equals(Severity.HEAVY)) {
-            maxDownfall = -10;
-            minDownfall = -7;
-        } else if (WeatherManagerSystem.getCurrentSeverity().equals(Severity.MODERATE)) {
-            maxDownfall = -8;
-            minDownfall = -6;
-        }
+        if (weather != null && weatherManagerSystem.getCurrentSeverity() != null) {
+            maxDownfall = -7;
+            minDownfall = -4;
+            switch (weatherManagerSystem.getCurrentSeverity()) {
+                case HEAVY:
+                    maxDownfall = -10;
+                    minDownfall = -7;
+                    break;
+                case MODERATE:
+                    maxDownfall = -9;
+                    minDownfall = -7;
+                    break;
+                case LIGHT:
+                    maxDownfall = -8;
+                    minDownfall = -6;
+                    break;
+            }
 
-        if (weather != null) {
-            if (weather.equals(DownfallCondition.DownfallType.RAIN)) {
-                prefabName = "WeatherManager:rain";
-                makeNewParticleEmitters();
-            } else if (weather.equals(DownfallCondition.DownfallType.HAIL)) {
-                prefabName = "WeatherManager:hail";
-                makeNewParticleEmitters();
-            } else if (weather.equals(DownfallCondition.DownfallType.SNOW)) {
-                prefabName = "WeatherManager:snow";
-                makeNewParticleEmitters();
-            } else if (weather.equals(DownfallCondition.DownfallType.NONE)) {
-                prefabName = IS_SUNNY;
-                clearEmitters();
+            if (localPlayer.getPosition() != null) {
+                switch (weather) {
+                    case RAIN:
+                        prefabName = "WeatherManager:rain";
+                        makeNewParticleEmitters();
+                        break;
+                    case HAIL:
+                        prefabName = "WeatherManager:hail";
+                        makeNewParticleEmitters();
+                        break;
+                    case SNOW:
+                        maxDownfall--; //makes snow fall slower
+                        minDownfall--;
+                        prefabName = "WeatherManager:snow";
+                        makeNewParticleEmitters();
+                        break;
+                    case NONE:
+                        prefabName = IS_SUNNY;
+                        clearEmitters();
+                        break;
+                }
             }
         }
     }

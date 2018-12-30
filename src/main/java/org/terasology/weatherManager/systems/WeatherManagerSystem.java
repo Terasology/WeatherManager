@@ -29,6 +29,8 @@ import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
+import org.terasology.registry.Share;
+import java.util.Random;
 import org.terasology.weatherManager.events.StartWeatherEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
@@ -39,14 +41,15 @@ import org.terasology.world.time.WorldTime;
 import java.math.RoundingMode;
 
 @RegisterSystem
+@Share(WeatherManagerSystem.class)
 public class WeatherManagerSystem extends BaseComponentSystem {
 
-    private static Vector2f currentWind;
-    private static Severity severity;
+    private Vector2f currentWind;
+    private Severity severity;
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
 
-    private static DownfallCondition.DownfallType currentWeather;
+    private DownfallCondition.DownfallType currentWeather;
 
     private WeatherConditionProvider weatherConditionProvider;
 
@@ -64,14 +67,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
-        float windY = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
-        if (Math.random() > .5) {
-            windX *= -1;
-        }
-        if (Math.random() > .5) {
-            windY *= -1;
-        }
+        float windX = randomWindSpeed();
+        float windY = randomWindSpeed();
+
         DownfallCondition condition = DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.RAIN, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
@@ -81,14 +79,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it snow", helpText = "Changes the weather to snowing for some time")
     public String makeSnow(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
-        float windY = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
-        if (Math.random() > .5) {
-            windX *= -1;
-        }
-        if (Math.random() > .5) {
-            windY *= -1;
-        }
+        float windX = randomWindSpeed();
+        float windY = randomWindSpeed();
+
         DownfallCondition condition = DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.SNOW, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
@@ -98,14 +91,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it hail", helpText = "Changes the weather to hailing for some time")
     public String makeHail(@CommandParam(value = "time") int time) {
-        float windX = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
-        float windY = (float) Math.random() / Math.max((int) (Math.random() * 10), 1);
-        if (Math.random() > .5) {
-            windX *= -1;
-        }
-        if (Math.random() > .5) {
-            windY *= -1;
-        }
+        float windX = randomWindSpeed();
+        float windY = randomWindSpeed();
+
         DownfallCondition condition = DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.HAIL, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
@@ -137,6 +125,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
+
+        logger.info("current: "+current);
     }
 
     /**
@@ -179,13 +169,18 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
     }
 
-    public static DownfallCondition.DownfallType getCurrentWeather() {
+    public DownfallCondition.DownfallType getCurrentWeather() {
         return currentWeather;
     }
-    public static Vector2f getCurrentWind() {
+    public Vector2f getCurrentWind() {
         return currentWind;
     }
-    public static Severity getCurrentSeverity() {
+    public Severity getCurrentSeverity() {
         return severity;
+    }
+
+    public float randomWindSpeed() {
+        Random rand = new Random();
+        return (float) Math.random() / (rand.nextInt(21) - 10);
     }
 }
