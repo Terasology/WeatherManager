@@ -388,6 +388,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 } else if (current.equals(air)){
                     currentY--;
                     lastGround = false;
+                } else if (current.isWaving() || !current.isAttachmentAllowed()) {
+                    placed = true; //break out to avoid placing snow on blocks like grass
                 } else if (!current.equals(snow)){
                     lastGround = true;
                     currentY++;
