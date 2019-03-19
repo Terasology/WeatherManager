@@ -23,20 +23,26 @@ import org.terasology.entitySystem.entity.lifecycleEvents.OnActivatedComponent;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;
+import org.terasology.logic.delay.PeriodicActionTriggeredEvent;
 import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.LocalPlayer;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
+import org.terasology.math.geom.Vector3i;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.physics.events.MovedEvent;
 import org.terasology.registry.In;
 import org.terasology.weatherManager.events.StartWeatherEvent;
 import org.terasology.weatherManager.weather.DownfallCondition;
+import org.terasology.world.WorldProvider;
+import org.terasology.world.block.Block;
+import org.terasology.world.block.BlockManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 //TODO: destroy on contact with blocks (water)
 
@@ -47,6 +53,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final int SIZE_OF_PARTICLE_AREA = 24;
     private static final int BUFFER_AMOUNT = 5;
     private static final int CLOUD_HEIGHT = 127;
+    private static final int SNOW_BLOCK_RANGE = 40;
 
     private String prefabName;
 
@@ -67,11 +74,22 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     @In
     private WeatherManagerSystem weatherManagerSystem;
 
+    @In
+    private WorldProvider worldProvider;
+
+    @In
+    private BlockManager blockManager;
+
     private int minDownfall;
     private int maxDownfall;
+    private Block air;
+    private Block snow;
 
     @Override
     public void postBegin() {
+        air = blockManager.getBlock("engine:air");
+        snow = blockManager.getBlock("WeatherManager:snow");
+
         particlesMade = false;
 
         particleSpawners = new HashMap<>();
@@ -342,6 +360,41 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                         clearEmitters();
                         break;
                 }
+            }
+        }
+    }
+
+    /**
+     * Places snow blocks on the ground when it is snowing.
+     * The event with the id "placeSnow" will only be created when it is snowing.
+     * @param event The event that means it is time to place snow
+     * @param worldEntity The entity that recieved the event
+     */
+    @ReceiveEvent
+    public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
+        if (event.getActionId().equals("placeSnow")) {
+            Random rand = new Random();
+            int x = (int) localPlayer.getPosition().x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
+            int z = (int) localPlayer.getPosition().z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
+            int currentY = (int) localPlayer.getPosition().y + SNOW_BLOCK_RANGE;
+            int iter = 0;
+            boolean lastGround = false;
+            boolean placed = false;
+            while(!placed || iter < SNOW_BLOCK_RANGE * 2) {
+                Block current = worldProvider.getBlock(x, currentY, z);
+                if (current.equals(air) && lastGround) {
+                    worldProvider.setBlock(new Vector3i(x, currentY, z), snow);
+                    placed = true;
+                } else if (current.equals(air)){
+                    currentY--;
+                    lastGround = false;
+                } else if (!current.equals(snow)){
+                    lastGround = true;
+                    currentY++;
+                } else {
+                    placed = true; //break out to avoid double-placing snow
+                }
+                iter++;
             }
         }
     }
