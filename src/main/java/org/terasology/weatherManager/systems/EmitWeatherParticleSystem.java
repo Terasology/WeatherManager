@@ -380,17 +380,17 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
             int iter = 0;
             boolean lastGround = false;
             boolean placed = false;
-            while(!placed || iter < SNOW_BLOCK_RANGE * 2) {
+            while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
                 Block current = worldProvider.getBlock(x, currentY, z);
                 if (current.equals(air) && lastGround) {
                     worldProvider.setBlock(new Vector3i(x, currentY, z), snow);
                     placed = true;
-                } else if (current.equals(air)){
+                } else if (current.equals(air)) {
                     currentY--;
                     lastGround = false;
                 } else if (current.isWaving() || !current.isAttachmentAllowed()) {
                     placed = true; //break out to avoid placing snow on blocks like grass
-                } else if (!current.equals(snow)){
+                } else if (!current.equals(snow)) {
                     lastGround = true;
                     currentY++;
                 } else {

@@ -123,7 +123,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
 
-        if(currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
             delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
         } else {
             if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
@@ -150,7 +150,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
 
-        if(currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
             delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
         } else {
             if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
@@ -180,7 +180,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
 
-        if(currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
             delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
         } else {
             if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
