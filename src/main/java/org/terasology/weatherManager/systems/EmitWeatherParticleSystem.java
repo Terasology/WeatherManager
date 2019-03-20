@@ -19,41 +19,41 @@ package org.terasology.weatherManager.systems;
 import org.terasology.entitySystem.entity.EntityBuilder;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
-import org.terasology.entitySystem.entity.lifecycleEvents.OnActivatedComponent;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
+import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.logic.delay.PeriodicActionTriggeredEvent;
 import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.LocalPlayer;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
-import org.terasology.math.geom.Vector3i;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.physics.events.MovedEvent;
 import org.terasology.registry.In;
-import org.terasology.weatherManager.events.StartWeatherEvent;
+import org.terasology.weatherManager.events.StartHailEvent;
+import org.terasology.weatherManager.events.StartRainEvent;
+import org.terasology.weatherManager.events.StartSnowEvent;
+import org.terasology.weatherManager.events.StartSunEvent;
 import org.terasology.weatherManager.weather.DownfallCondition;
-import org.terasology.world.WorldProvider;
-import org.terasology.world.block.Block;
-import org.terasology.world.block.BlockManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 //TODO: destroy on contact with blocks (water)
 
-@RegisterSystem
+@RegisterSystem(RegisterMode.CLIENT)
 public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
-    private static final String IS_SUNNY = "sunny";
+    private static final String SUN = "sunny";
+    private static final String SNOW = "snow";
+    private static final String RAIN = "rain";
+    private static final String HAIL = "hail";
+
     private static final int SIZE_OF_PARTICLE_AREA = 24;
     private static final int BUFFER_AMOUNT = 5;
     private static final int CLOUD_HEIGHT = 127;
-    private static final int SNOW_BLOCK_RANGE = 40;
 
     private String prefabName;
 
@@ -69,52 +69,75 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private EntityManager entityManager;
 
     @In
-    private LocalPlayer localPlayer;
-
-    @In
     private WeatherManagerSystem weatherManagerSystem;
 
     @In
-    private WorldProvider worldProvider;
-
-    @In
-    private BlockManager blockManager;
+    private LocalPlayer localPlayer;
 
     private int minDownfall;
     private int maxDownfall;
-    private Block air;
-    private Block snow;
 
     @Override
     public void postBegin() {
-        air = blockManager.getBlock("engine:air");
-        snow = blockManager.getBlock("WeatherManager:snow");
-
         particlesMade = false;
 
         particleSpawners = new HashMap<>();
         builders = new HashMap<>();
-        setPrefabName();
     }
 
     /**
-     * Begins making the process of visual effects for weather.
-     * @param event The StartWeatherEvent that was recieved.
+     * Begins the process of visual effects for rain.
+     * @param event The StartRainEvent that was received.
      * @param worldEntity The entity that sent the event.
      */
     @ReceiveEvent
-    public void onStartWeatherEvent(StartWeatherEvent event, EntityRef worldEntity) {
+    public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
+        prefabName = RAIN;
 
         if (localPlayer.getPosition() != null) {
-            clearEmitters();
-            setPrefabName();
+            beginParticles();
         }
     }
 
+    /**
+     * Begins the process of visual effects for snow.
+     * @param event The StartSnowEvent that was received.
+     * @param worldEntity The entity that sent the event.
+     */
     @ReceiveEvent
-    public void onCharacterActivation(OnActivatedComponent event, EntityRef characterEntity) {
-        if (!particlesMade) {
-            setPrefabName();
+    public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
+        prefabName = SNOW;
+
+        if (localPlayer.getPosition() != null) {
+            beginParticles();
+        }
+    }
+
+    /**
+     * Begins the process of visual effects for hail.
+     * @param event The StartHailEvent that was recieved.
+     * @param worldEntity The entity that sent the event.
+     */
+    @ReceiveEvent
+    public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
+        prefabName = HAIL;
+
+        if (localPlayer.getPosition() != null) {
+            beginParticles();
+        }
+    }
+
+    /**
+     * Removes all particles for a sunny effect.
+     * @param event The StartSunEvent that was received.
+     * @param worldEntity The entity that sent the event.
+     */
+    @ReceiveEvent
+    public void onStartSunEvent(StartSunEvent event, EntityRef worldEntity) {
+        prefabName = SUN;
+
+        if (localPlayer.getPosition() != null) {
+            beginParticles();
         }
     }
 
@@ -181,7 +204,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     private void refreshParticles(boolean x, boolean z, boolean positive) {
 
-        if (!prefabName.equals(IS_SUNNY)) {
+        if (!prefabName.equals(SUN)) {
             ArrayList<Vector2f> remove = new ArrayList<>();
 
             for (Vector2f vect : particleSpawners.keySet()) {
@@ -318,7 +341,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         }
     }
 
-    private void setPrefabName() {
+    private void beginParticles() {
         DownfallCondition.DownfallType weather = weatherManagerSystem.getCurrentWeather();
 
         if (weather != null && weatherManagerSystem.getCurrentSeverity() != null) {
@@ -340,63 +363,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
             }
 
             if (localPlayer.getPosition() != null) {
-                switch (weather) {
-                    case RAIN:
-                        prefabName = "WeatherManager:rain";
-                        makeNewParticleEmitters();
-                        break;
-                    case HAIL:
-                        prefabName = "WeatherManager:hail";
-                        makeNewParticleEmitters();
-                        break;
-                    case SNOW:
-                        maxDownfall--; //makes snow fall slower
-                        minDownfall--;
-                        prefabName = "WeatherManager:snow";
-                        makeNewParticleEmitters();
-                        break;
-                    case NONE:
-                        prefabName = IS_SUNNY;
-                        clearEmitters();
-                        break;
-                }
-            }
-        }
-    }
-
-    /**
-     * Places snow blocks on the ground when it is snowing.
-     * The event with the id "placeSnow" will only be created when it is snowing.
-     * @param event The event that means it is time to place snow
-     * @param worldEntity The entity that recieved the event
-     */
-    @ReceiveEvent
-    public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
-        if (event.getActionId().equals("placeSnow")) {
-            Random rand = new Random();
-            int x = (int) localPlayer.getPosition().x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-            int z = (int) localPlayer.getPosition().z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-            int currentY = (int) localPlayer.getPosition().y + SNOW_BLOCK_RANGE;
-            int iter = 0;
-            boolean lastGround = false;
-            boolean placed = false;
-            while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
-                Block current = worldProvider.getBlock(x, currentY, z);
-                if (current.equals(air) && lastGround) {
-                    worldProvider.setBlock(new Vector3i(x, currentY, z), snow);
-                    placed = true;
-                } else if (current.equals(air)) {
-                    currentY--;
-                    lastGround = false;
-                } else if (current.isWaving() || !current.isAttachmentAllowed()) {
-                    placed = true; //break out to avoid placing snow on blocks like grass
-                } else if (!current.equals(snow)) {
-                    lastGround = true;
-                    currentY++;
-                } else {
-                    placed = true; //break out to avoid double-placing snow
-                }
-                iter++;
+                makeNewParticleEmitters();
             }
         }
     }

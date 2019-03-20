@@ -27,11 +27,14 @@ import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
+import org.terasology.logic.players.LocalPlayer;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
-import java.util.Random;
-import org.terasology.weatherManager.events.StartWeatherEvent;
+import org.terasology.weatherManager.events.StartHailEvent;
+import org.terasology.weatherManager.events.StartRainEvent;
+import org.terasology.weatherManager.events.StartSnowEvent;
+import org.terasology.weatherManager.events.StartSunEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;
@@ -39,6 +42,7 @@ import org.terasology.weatherManager.weather.WeatherCondition;
 import org.terasology.world.time.WorldTime;
 
 import java.math.RoundingMode;
+import java.util.Random;
 
 @RegisterSystem
 @Share(WeatherManagerSystem.class)
@@ -61,6 +65,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @In
     private DelayManager delayManager;
+
+    @In
+    private LocalPlayer localPlayer;
 
     @In
     private WorldTime worldTime;
@@ -123,13 +130,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
 
-        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-            delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
-        } else {
-            if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
-            }
-        }
+        triggerEvents();
 
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
         delayManager.addDelayedAction(weatherEntity, "Weather", length);
@@ -150,17 +151,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
 
-        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-            delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
-        } else {
-            if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
-            }
-        }
+        triggerEvents();
 
         logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
-
-        weatherEntity.send(new StartWeatherEvent());
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -180,19 +173,34 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
 
-        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-            delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
-        } else {
-            if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
-            }
-        }
-
-        worldEntity.send(new StartWeatherEvent());
+        triggerEvents();
 
         logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
     }
 
+    /**
+     * Adds/removes periodic actions and sends events based on the type of weather it currently is.
+     */
+    private void triggerEvents() {
+        if (localPlayer.getClientEntity() != null) {
+            if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+                localPlayer.getClientEntity().send(new StartSnowEvent());
+                delayManager.addPeriodicAction(localPlayer.getClientEntity(), "placeSnow", 10, 50);
+            } else {
+                if (delayManager.hasPeriodicAction(localPlayer.getClientEntity(), "placeSnow")) {
+                    delayManager.cancelPeriodicAction(localPlayer.getClientEntity(), "placeSnow");
+                }
+
+                if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
+                    localPlayer.getClientEntity().send(new StartRainEvent());
+                } else if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
+                    localPlayer.getClientEntity().send(new StartHailEvent());
+                } else {
+                    localPlayer.getClientEntity().send(new StartSunEvent());
+                }
+            }
+        }
+    }
     public DownfallCondition.DownfallType getCurrentWeather() {
         return currentWeather;
     }
