@@ -47,7 +47,7 @@ public class BrickPlacingWeatherSystem extends BaseComponentSystem {
     @Override
     public void postBegin() {
         air = blockManager.getBlock("engine:air");
-        snow = blockManager.getBlock("WeatherManager:snow");
+        snow = blockManager.getBlock("Core:Snowball:engine:eighthBlock");
     }
 
     /**

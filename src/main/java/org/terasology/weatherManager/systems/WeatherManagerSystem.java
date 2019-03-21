@@ -22,6 +22,7 @@ import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
+import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.console.commandSystem.annotations.CommandParam;
@@ -44,7 +45,7 @@ import org.terasology.world.time.WorldTime;
 import java.math.RoundingMode;
 import java.util.Random;
 
-@RegisterSystem
+@RegisterSystem(RegisterMode.AUTHORITY)
 @Share(WeatherManagerSystem.class)
 public class WeatherManagerSystem extends BaseComponentSystem {
 
