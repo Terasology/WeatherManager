@@ -28,7 +28,6 @@ import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
-import org.terasology.logic.players.LocalPlayer;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
@@ -66,9 +65,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @In
     private DelayManager delayManager;
-
-    @In
-    private LocalPlayer localPlayer;
 
     @In
     private WorldTime worldTime;
@@ -183,22 +179,20 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
-        if (localPlayer.getClientEntity() != null) {
-            if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-                localPlayer.getClientEntity().send(new StartSnowEvent());
-                delayManager.addPeriodicAction(localPlayer.getClientEntity(), "placeSnow", 10, 50);
-            } else {
-                if (delayManager.hasPeriodicAction(localPlayer.getClientEntity(), "placeSnow")) {
-                    delayManager.cancelPeriodicAction(localPlayer.getClientEntity(), "placeSnow");
-                }
+        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+            weatherEntity.send(new StartSnowEvent());
+            delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
+        } else {
+            if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+                delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
+            }
 
-                if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
-                    localPlayer.getClientEntity().send(new StartRainEvent());
-                } else if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
-                    localPlayer.getClientEntity().send(new StartHailEvent());
-                } else {
-                    localPlayer.getClientEntity().send(new StartSunEvent());
-                }
+            if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
+                weatherEntity.send(new StartRainEvent());
+            } else if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
+                weatherEntity.send(new StartHailEvent());
+            } else {
+                weatherEntity.send(new StartSunEvent());
             }
         }
     }

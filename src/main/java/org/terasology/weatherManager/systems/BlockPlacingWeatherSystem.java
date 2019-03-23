@@ -16,6 +16,7 @@
 
 package org.terasology.weatherManager.systems;
 
+import org.terasology.context.Context;
 import org.terasology.entitySystem.entity.EntityRef;
 import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
@@ -23,17 +24,19 @@ import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.delay.PeriodicActionTriggeredEvent;
 import org.terasology.logic.location.LocationComponent;
-import org.terasology.math.geom.Vector3f;
 import org.terasology.math.geom.Vector3i;
+import org.terasology.network.Client;
+import org.terasology.network.NetworkSystem;
 import org.terasology.registry.In;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
 
+import java.util.Iterator;
 import java.util.Random;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
-public class BrickPlacingWeatherSystem extends BaseComponentSystem {
+public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     private static final int SNOW_BLOCK_RANGE = 40;
     private Block air;
     private Block snow;
@@ -44,10 +47,16 @@ public class BrickPlacingWeatherSystem extends BaseComponentSystem {
     @In
     private BlockManager blockManager;
 
+    @In
+    private Context context;
+
+    private NetworkSystem networkSystem;
+
     @Override
     public void postBegin() {
         air = blockManager.getBlock("engine:air");
         snow = blockManager.getBlock("Core:Snowball:engine:eighthBlock");
+        networkSystem = context.get(NetworkSystem.class);
     }
 
     /**
@@ -58,33 +67,43 @@ public class BrickPlacingWeatherSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
-        Vector3f loc = worldEntity.getComponent(LocationComponent.class).getWorldPosition();
-        if (event.getActionId().equals("placeSnow")) {
-            Random rand = new Random();
-            int x = (int) loc.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-            int z = (int) loc.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-            int currentY = (int) loc.y + SNOW_BLOCK_RANGE;
-            int iter = 0;
-            boolean lastGround = false;
-            boolean placed = false;
-            while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
-                Block current = worldProvider.getBlock(x, currentY, z);
-                if (current.equals(air) && lastGround) {
-                    worldProvider.setBlock(new Vector3i(x, currentY, z), snow);
-                    placed = true;
-                } else if (current.equals(air)) {
-                    currentY--;
-                    lastGround = false;
-                } else if (current.isWaving() || !current.isAttachmentAllowed()) {
-                    placed = true; //break out to avoid placing snow on blocks like grass
-                } else if (!current.equals(snow)) {
-                    lastGround = true;
-                    currentY++;
-                } else {
-                    placed = true; //break out to avoid double-placing snow
-                }
-                iter++;
+        Iterator<Client> players = networkSystem.getPlayers().iterator();
+        while (players.hasNext()) {
+            Client currentPlayer = players.next();
+            LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+            Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+            
+            if (event.getActionId().equals("placeSnow")) {
+                placeSnow(playerPos);
             }
+        }
+    }
+
+    private void placeSnow(Vector3i playerPos) {
+        Random rand = new Random();
+        int x = (int) playerPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
+        int z = (int) playerPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
+        int currentY = (int) playerPos.y + SNOW_BLOCK_RANGE;
+        int iter = 0;
+        boolean lastGround = false;
+        boolean placed = false;
+        while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
+            Block current = worldProvider.getBlock(x, currentY, z);
+            if (current.equals(air) && lastGround) {
+                worldProvider.setBlock(new Vector3i(x, currentY, z), snow);
+                placed = true;
+            } else if (current.equals(air)) {
+                currentY--;
+                lastGround = false;
+            } else if (current.isWaving() || !current.isAttachmentAllowed()) {
+                placed = true; //break out to avoid placing snow on blocks like grass
+            } else if (!current.equals(snow)) {
+                lastGround = true;
+                currentY++;
+            } else {
+                placed = true; //break out to avoid double-placing snow
+            }
+            iter++;
         }
     }
 }
