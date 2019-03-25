@@ -137,7 +137,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         prefabName = SUN;
 
         if (localPlayer.getPosition() != null) {
-            beginParticles();
+            clearEmitters();
         }
     }
 

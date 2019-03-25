@@ -72,9 +72,11 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
             Client currentPlayer = players.next();
             LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
             Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
-            
+
             if (event.getActionId().equals("placeSnow")) {
                 placeSnow(playerPos);
+            } else if (event.getActionId().equals("removeSnow")) {
+                removeSnow(playerPos);
             }
         }
     }
@@ -102,6 +104,32 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
                 currentY++;
             } else {
                 placed = true; //break out to avoid double-placing snow
+            }
+            iter++;
+        }
+    }
+
+    private void removeSnow(Vector3i playerPos) {
+        Random rand = new Random();
+        int x = (int) playerPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
+        int z = (int) playerPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
+        int currentY = (int) playerPos.y + SNOW_BLOCK_RANGE;
+        int iter = 0;
+        boolean lastGround = false;
+        boolean placed = false;
+        while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
+            Block current = worldProvider.getBlock(x, currentY, z);
+            if (current.equals(snow)) {
+                worldProvider.setBlock(new Vector3i(x, currentY, z), air);
+                placed = true;
+            } else if (lastGround) {
+                placed = true; //break out if there is no snow
+            } else if (current.equals(air)) {
+                currentY--;
+                lastGround = false;
+            } else {
+                lastGround = true;
+                currentY++;
             }
             iter++;
         }

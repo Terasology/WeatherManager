@@ -179,23 +179,57 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
-        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW) && !delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+        logger.info("triggered");
+        if (currentWeather.equals(DownfallCondition.DownfallType.SNOW)){
+            if (!delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+                delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
+            }
             weatherEntity.send(new StartSnowEvent());
-            delayManager.addPeriodicAction(weatherEntity, "placeSnow", 10, 50);
         } else {
             if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+                logger.info("cancelling");
                 delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
             }
-
-            if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
-                weatherEntity.send(new StartRainEvent());
-            } else if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
-                weatherEntity.send(new StartHailEvent());
-            } else {
-                weatherEntity.send(new StartSunEvent());
+        }
+        logger.info("has placeSnow: "+delayManager.hasPeriodicAction(weatherEntity, "placeSnow"));
+        if (currentWeather.equals(DownfallCondition.DownfallType.NONE)){
+            if (!delayManager.hasPeriodicAction(weatherEntity, "removeSnow")) {
+                delayManager.addPeriodicAction(weatherEntity, "removeSnow", 10, 50);
+            }
+            weatherEntity.send(new StartSunEvent());
+        } else {
+            if (delayManager.hasPeriodicAction(weatherEntity, "removeSnow")) {
+                logger.info("removing");
+                delayManager.cancelPeriodicAction(weatherEntity, "removeSnow");
             }
         }
+
+        if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
+            weatherEntity.send(new StartRainEvent());
+        } else if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
+            weatherEntity.send(new StartHailEvent());
+        }
     }
+
+    /**
+     * Removes the periodic actions before saving, in case the game will be closed out.
+     */
+    @Override
+    public void preSave() {
+        if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
+            delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
+        }
+
+        if (delayManager.hasPeriodicAction(weatherEntity, "removeSnow")) {
+            delayManager.cancelPeriodicAction(weatherEntity, "removeSnow");
+        }
+    }
+
+    @Override
+    public void postSave() {
+     triggerEvents();
+    }
+
     public DownfallCondition.DownfallType getCurrentWeather() {
         return currentWeather;
     }
