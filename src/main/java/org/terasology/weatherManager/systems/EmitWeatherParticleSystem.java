@@ -23,8 +23,9 @@ import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
+import org.terasology.logic.characters.events.DeathEvent;
 import org.terasology.logic.location.LocationComponent;
-import org.terasology.logic.players.LocalPlayer;
+import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
 import org.terasology.particles.components.ParticleEmitterComponent;
@@ -55,13 +56,13 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final int BUFFER_AMOUNT = 5;
     private static final int CLOUD_HEIGHT = 127;
 
-    private String prefabName;
-
-    private Vector3f center;
+    private String prefabName = SUN;
 
     private Map<Vector2f, EntityRef> particleSpawners;
 
     private Map<Vector2f, EntityBuilder> builders;
+
+    private Map<EntityRef, Vector3f> previousLocations;
 
     private boolean particlesMade;
 
@@ -70,9 +71,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     @In
     private WeatherManagerSystem weatherManagerSystem;
-
-    @In
-    private LocalPlayer localPlayer;
 
     private int minDownfall;
     private int maxDownfall;
@@ -83,6 +81,38 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
         particleSpawners = new HashMap<>();
         builders = new HashMap<>();
+        previousLocations = new HashMap<>();
+    }
+
+    @ReceiveEvent
+    public void playerSpawned(OnPlayerSpawnedEvent event, EntityRef player) {
+        LocationComponent loc = player.getComponent(LocationComponent.class);
+        if (loc != null) {
+            previousLocations.put(player, new Vector3f(loc.getWorldPosition()));
+            if (!prefabName.equals(SUN)) {
+                beginParticles(player);
+            }
+        }
+    }
+
+    @ReceiveEvent
+    public void playerRespawned(OnPlayerSpawnedEvent event, EntityRef player) {
+        LocationComponent loc = player.getComponent(LocationComponent.class);
+
+        if (loc != null) {
+            previousLocations.put(player, new Vector3f(loc.getWorldPosition()));
+            if (!prefabName.equals(SUN)) {
+                beginParticles(player);
+            }
+        }
+    }
+
+    @ReceiveEvent
+    public void playerDied(DeathEvent event, EntityRef player) {
+        if (player.hasComponent(LocationComponent.class) && previousLocations.containsKey(player)) {
+            clearEmitters(player);
+            previousLocations.remove(player);
+        } //TODO: test the refector, multiplayer
     }
 
     /**
@@ -94,8 +124,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
         prefabName = RAIN;
 
-        if (localPlayer.getPosition() != null) {
-            beginParticles();
+        for (EntityRef ref : previousLocations.keySet()) {
+            beginParticles(ref);
         }
     }
 
@@ -108,8 +138,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
         prefabName = SNOW;
 
-        if (localPlayer.getPosition() != null) {
-            beginParticles();
+        for (EntityRef ref : previousLocations.keySet()) {
+            beginParticles(ref);
         }
     }
 
@@ -122,8 +152,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
         prefabName = HAIL;
 
-        if (localPlayer.getPosition() != null) {
-            beginParticles();
+        for (EntityRef ref : previousLocations.keySet()) {
+            beginParticles(ref);
         }
     }
 
@@ -136,8 +166,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     public void onStartSunEvent(StartSunEvent event, EntityRef worldEntity) {
         prefabName = SUN;
 
-        if (localPlayer.getPosition() != null) {
-            clearEmitters();
+        for (EntityRef ref : previousLocations.keySet()) {
+            clearEmitters(ref);
         }
     }
 
@@ -149,34 +179,37 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onCharacterMoved(MovedEvent event, EntityRef character) {
 
-        if (center != null) {
+        if (previousLocations.containsKey(character)) {
+            Vector3f center = previousLocations.get(character);
             Vector3f pos = round(new Vector3f(event.getPosition()));
 
-            if (!pos.equals(center)) {
+            if (center != null && !pos.equals(center)) {
 
                 Vector3f dif = new Vector3f(center).sub(pos);
 
                 center = new Vector3f(pos);
 
+                previousLocations.replace(character, center);
+
                 if (dif.x != 0) {
                     if (dif.x > 0) {
-                        refreshParticles(true, false, true);
+                        refreshParticles(true, false, true, center);
                     } else {
-                        refreshParticles(true, false, false);
+                        refreshParticles(true, false, false, center);
                     }
                 }
                 if (dif.z != 0) {
                     if (dif.z > 0) {
-                        refreshParticles(false, true, true);
+                        refreshParticles(false, true, true, center);
                     } else {
-                        refreshParticles(false, true, false);
+                        refreshParticles(false, true, false, center);
                     }
                 }
                 if (dif.y != 0) {
                     if (dif.y > 0) {
-                        refreshParticles(false, false, false);
+                        refreshParticles(false, false, false, center);
                     } else {
-                        refreshParticles(false, true, false);
+                        refreshParticles(false, true, false, center);
                     }
                 }
             }
@@ -202,7 +235,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      * @param z If the player moved on the z axis.
      * @param positive If the player moved in a positive or negative direction.
      */
-    private void refreshParticles(boolean x, boolean z, boolean positive) {
+    private void refreshParticles(boolean x, boolean z, boolean positive, Vector3f center) {
 
         if (!prefabName.equals(SUN)) {
             ArrayList<Vector2f> remove = new ArrayList<>();
@@ -276,12 +309,17 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     }
 
     /**
-     * Resets builders and particleSpawners, and destroys current entities.
+     * Resets builders and particleSpawners, and destroys current entities (within range of player).
      */
-    private void clearEmitters() {
-        if (entityManager != null) {
+    private void clearEmitters(EntityRef entityWithLoc) {
+        LocationComponent loc = entityWithLoc.getComponent(LocationComponent.class);
+
+        if (entityManager != null && loc != null) {
+            Vector3f furthestVect = new Vector3f(SIZE_OF_PARTICLE_AREA / 2, SIZE_OF_PARTICLE_AREA / 3, SIZE_OF_PARTICLE_AREA / 2);
+            float maxDist = Vector3f.zero().distance(furthestVect);
             for (EntityRef ref : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
-                if (ref.getParentPrefab() != null) {
+                float actualDist = ref.getComponent(LocationComponent.class).getWorldPosition().distance(loc.getWorldPosition());
+                if (ref.getParentPrefab() != null && actualDist < maxDist) {
                     boolean isRain = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:rain");
                     boolean isSnow = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:snow");
                     boolean isHail = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:hail");
@@ -299,15 +337,14 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     /**
      * Creates new particle emitters based on the location of the player.
      */
-    private void makeNewParticleEmitters() {
+    private void makeNewParticleEmitters(EntityRef player) {
+        LocationComponent loc = player.getComponent(LocationComponent.class);
 
-        if (localPlayer.getPosition() != null && weatherManagerSystem.getCurrentWind() != null) {
+        if (loc != null && weatherManagerSystem.getCurrentWind() != null) {
             particlesMade = true;
-            clearEmitters();
+            clearEmitters(player);
             if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
-                Vector3f baseLoc = round(localPlayer.getPosition());
-
-                center = baseLoc;
+                Vector3f baseLoc = round(loc.getWorldPosition());
 
                 float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
                 float windYAbs = Math.abs(weatherManagerSystem.getCurrentWind().y * 10);
@@ -341,7 +378,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         }
     }
 
-    private void beginParticles() {
+    private void beginParticles(EntityRef ref) {
         DownfallCondition.DownfallType weather = weatherManagerSystem.getCurrentWeather();
 
         if (weather != null && weatherManagerSystem.getCurrentSeverity() != null) {
@@ -362,9 +399,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     break;
             }
 
-            if (localPlayer.getPosition() != null) {
-                makeNewParticleEmitters();
-            }
+            makeNewParticleEmitters(ref);
         }
     }
 }
