@@ -28,6 +28,7 @@ import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
+import org.terasology.network.events.DisconnectedEvent;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.physics.events.MovedEvent;
@@ -86,33 +87,52 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     @ReceiveEvent
     public void playerSpawned(OnPlayerSpawnedEvent event, EntityRef player) {
-        LocationComponent loc = player.getComponent(LocationComponent.class);
-        if (loc != null) {
-            previousLocations.put(player, new Vector3f(loc.getWorldPosition()));
-            if (!prefabName.equals(SUN)) {
-                beginParticles(player);
-            }
-        }
+        begin(player);
     }
 
     @ReceiveEvent
     public void playerRespawned(OnPlayerSpawnedEvent event, EntityRef player) {
+        begin(player);
+    }
+
+    @ReceiveEvent
+    public void playerDied(DeathEvent event, EntityRef player) {
+        end(player);
+    }
+
+    @ReceiveEvent
+    public void playerLeft(DisconnectedEvent event, EntityRef player) {
+        end(player);
+    }
+
+    /**
+     * Ends particle effects around a given playerbegin.
+     * @param player The player whose effects must be removed.
+     */
+    private void end(EntityRef player) {
+        if (player.hasComponent(LocationComponent.class) && previousLocations.containsKey(player)) {
+            clearEmitters();
+            previousLocations.remove(player);
+
+            for (EntityRef ref : previousLocations.keySet()) {
+                makeNewParticleEmitters(ref);
+            }
+        } //TODO: test the refector, multiplayer
+    }
+
+    /**
+     * Begins particle effects around a given player.
+     * @param player The player whose effects must begin
+     */
+    private void begin(EntityRef player) {
         LocationComponent loc = player.getComponent(LocationComponent.class);
 
         if (loc != null) {
             previousLocations.put(player, new Vector3f(loc.getWorldPosition()));
             if (!prefabName.equals(SUN)) {
-                beginParticles(player);
+                makeNewParticleEmitters(player);
             }
         }
-    }
-
-    @ReceiveEvent
-    public void playerDied(DeathEvent event, EntityRef player) {
-        if (player.hasComponent(LocationComponent.class) && previousLocations.containsKey(player)) {
-            clearEmitters(player);
-            previousLocations.remove(player);
-        } //TODO: test the refector, multiplayer
     }
 
     /**
@@ -122,11 +142,10 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
+        clearEmitters();
         prefabName = RAIN;
 
-        for (EntityRef ref : previousLocations.keySet()) {
-            beginParticles(ref);
-        }
+        beginParticles();
     }
 
     /**
@@ -136,11 +155,10 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
+        clearEmitters();
         prefabName = SNOW;
 
-        for (EntityRef ref : previousLocations.keySet()) {
-            beginParticles(ref);
-        }
+        beginParticles();
     }
 
     /**
@@ -150,11 +168,10 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
+        clearEmitters();
         prefabName = HAIL;
 
-        for (EntityRef ref : previousLocations.keySet()) {
-            beginParticles(ref);
-        }
+        beginParticles();
     }
 
     /**
@@ -166,9 +183,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     public void onStartSunEvent(StartSunEvent event, EntityRef worldEntity) {
         prefabName = SUN;
 
-        for (EntityRef ref : previousLocations.keySet()) {
-            clearEmitters(ref);
-        }
+        clearEmitters();
     }
 
      /**
@@ -188,7 +203,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 Vector3f dif = new Vector3f(center).sub(pos);
 
                 center = new Vector3f(pos);
-
                 previousLocations.replace(character, center);
 
                 if (dif.x != 0) {
@@ -244,10 +258,12 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 float distX = vect.distance(new Vector2f(center.x, vect.y));
                 float distZ = vect.distance(new Vector2f(vect.x, center.z));
                 if (distX > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT || distZ > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT) {
-                    remove.add(vect);
-                    if (builders.containsKey(vect)) {
-                        particleSpawners.get(vect).destroy();
-                        builders.remove(vect);
+                    if (!inRange(vect)) {
+                        remove.add(vect);
+                        if (builders.containsKey(vect)) {
+                            particleSpawners.get(vect).destroy();
+                            builders.remove(vect);
+                        }
                     }
                 } else {
                     Vector3f newPos = new Vector3f(vect.x, center.y + (float) SIZE_OF_PARTICLE_AREA / 3, vect.y);
@@ -311,15 +327,10 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     /**
      * Resets builders and particleSpawners, and destroys current entities (within range of player).
      */
-    private void clearEmitters(EntityRef entityWithLoc) {
-        LocationComponent loc = entityWithLoc.getComponent(LocationComponent.class);
-
-        if (entityManager != null && loc != null) {
-            Vector3f furthestVect = new Vector3f(SIZE_OF_PARTICLE_AREA / 2, SIZE_OF_PARTICLE_AREA / 3, SIZE_OF_PARTICLE_AREA / 2);
-            float maxDist = Vector3f.zero().distance(furthestVect);
+    private void clearEmitters() {
+        if (entityManager != null) {
             for (EntityRef ref : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
-                float actualDist = ref.getComponent(LocationComponent.class).getWorldPosition().distance(loc.getWorldPosition());
-                if (ref.getParentPrefab() != null && actualDist < maxDist) {
+                if (ref.getParentPrefab() != null) {
                     boolean isRain = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:rain");
                     boolean isSnow = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:snow");
                     boolean isHail = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:hail");
@@ -342,7 +353,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
         if (loc != null && weatherManagerSystem.getCurrentWind() != null) {
             particlesMade = true;
-            clearEmitters(player);
+
             if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
                 Vector3f baseLoc = round(loc.getWorldPosition());
 
@@ -378,7 +389,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         }
     }
 
-    private void beginParticles(EntityRef ref) {
+    private void beginParticles() {
         DownfallCondition.DownfallType weather = weatherManagerSystem.getCurrentWeather();
 
         if (weather != null && weatherManagerSystem.getCurrentSeverity() != null) {
@@ -399,7 +410,26 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     break;
             }
 
-            makeNewParticleEmitters(ref);
+            for (EntityRef ref : previousLocations.keySet()) {
+                makeNewParticleEmitters(ref);
+            }
         }
+    }
+
+    /**
+     * Finds if another player is within particle range of the given Vector2f.
+     * Intended to be used when clearing off particles.
+     * @param emitterLoc The center location of the range.
+     */
+    private boolean inRange(Vector2f emitterLoc) {
+
+        for (Vector3f other : previousLocations.values()) {
+            Vector2f withoutY = new Vector2f(other.x, other.z);
+
+            if (withoutY.distance(emitterLoc) < SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT) {
+                return true;
+            }
+        }
+        return false;
     }
 }
