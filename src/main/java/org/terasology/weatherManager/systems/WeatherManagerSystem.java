@@ -147,8 +147,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         currentWind = current.condition.wind;
 
         triggerEvents();
-
-        logger.info("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
     }
 
 //    private void makeClientsSimulationCarriers() {

@@ -28,12 +28,10 @@ import org.terasology.math.geom.Vector3i;
 import org.terasology.network.Client;
 import org.terasology.network.NetworkSystem;
 import org.terasology.registry.In;
+import org.terasology.utilities.random.FastRandom;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
-
-import java.util.Iterator;
-import java.util.Random;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class BlockPlacingWeatherSystem extends BaseComponentSystem {
@@ -67,22 +65,25 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
-        Iterator<Client> players = networkSystem.getPlayers().iterator();
-        while (players.hasNext()) {
-            Client currentPlayer = players.next();
-            LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-            Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+        if (event.getActionId().equals("placeSnow")) {
+            for(Client currentPlayer : networkSystem.getPlayers()) {
+                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
 
-            if (event.getActionId().equals("placeSnow")) {
                 placeSnow(playerPos);
-            } else if (event.getActionId().equals("removeSnow")) {
+            }
+        } else if (event.getActionId().equals("removeSnow")) {
+            for(Client currentPlayer : networkSystem.getPlayers()) {
+                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+
                 removeSnow(playerPos);
             }
         }
     }
 
     private void placeSnow(Vector3i playerPos) {
-        Random rand = new Random();
+        FastRandom rand = new FastRandom();
         int x = (int) playerPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
         int z = (int) playerPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
         int currentY = (int) playerPos.y + SNOW_BLOCK_RANGE;
@@ -97,8 +98,8 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
             } else if (current.equals(air)) {
                 currentY--;
                 lastGround = false;
-            } else if (current.isWaving() || !current.isAttachmentAllowed()) {
-                placed = true; //break out to avoid placing snow on blocks like grass
+            } else if (current.isPenetrable() || !current.isAttachmentAllowed()) {
+                break;
             } else if (!current.equals(snow)) {
                 lastGround = true;
                 currentY++;
@@ -110,7 +111,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     }
 
     private void removeSnow(Vector3i playerPos) {
-        Random rand = new Random();
+        FastRandom rand = new FastRandom();
         int x = (int) playerPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
         int z = (int) playerPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
         int currentY = (int) playerPos.y + SNOW_BLOCK_RANGE;
