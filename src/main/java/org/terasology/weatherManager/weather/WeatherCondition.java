@@ -18,6 +18,7 @@ package org.terasology.weatherManager.weather;
 import org.terasology.math.geom.Vector2f;
 
 /**
+ * Simple data class which describes in game weather condition
  * Created by Linus on 5-11-2014.
  */
 public final class WeatherCondition {
