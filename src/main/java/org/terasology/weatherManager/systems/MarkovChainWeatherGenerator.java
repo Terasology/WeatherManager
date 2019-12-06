@@ -164,7 +164,7 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
     /**
      * Creates a new Weather Generator which generates random weather using Markov Chain
-     * @param seed the seed to be used for {@link FastRandom}
+     * @param seed the seed to control the random weather generation
      * @param meanDuration Default mean duration of each generated weatherCondition
      */
     public MarkovChainWeatherGenerator(final long seed, final float meanDuration) {
