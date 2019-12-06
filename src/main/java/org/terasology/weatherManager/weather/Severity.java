@@ -16,6 +16,7 @@
 package org.terasology.weatherManager.weather;
 
 /**
+ * Describes the severity/concentration of the weather
 * Created by Linus on 15-2-2015.
 */
 public enum Severity {

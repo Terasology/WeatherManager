@@ -30,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * WeatherCondition provider using Markov Chain. Currently the only implementation for {@link WeatherConditionProvider}
  * Created by Linus on 5-11-2014.
  */
 public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
@@ -143,6 +144,11 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
         return (firstA > secondA && firstB > secondB) || (firstA < secondA && firstB < secondB);
     }
 
+
+    /**
+     * Generates the next random WindCondition using Markov Chain
+     * @return a random WindCondition represented as {@link Vector2f}
+     */
     public Vector2f nextWindCondition() {
         float expectedMagnitude = ((cloudinessHistory[1] + precipitationHistory[1]) / 8.0f)  * 0.75f + previousWind.length() * 0.25f;
         float stdDev = (cloudinessHistory[1] / 8.0f);
@@ -156,7 +162,11 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
         );
     }
 
-
+    /**
+     * Creates a new Weather Generator which generates random weather using Markov Chain
+     * @param seed the seed to control the random weather generation
+     * @param meanDuration Default mean duration of each generated weatherCondition
+     */
     public MarkovChainWeatherGenerator(final long seed, final float meanDuration) {
         this.meanDuration = meanDuration;
         this.randomNumberGenerator = new FastRandom(seed);

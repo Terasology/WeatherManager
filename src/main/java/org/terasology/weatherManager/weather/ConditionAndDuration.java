@@ -16,6 +16,8 @@
 package org.terasology.weatherManager.weather;
 
 /**
+ * Simple data class which contains the WeatherCondition and its effective duration
+ * @see WeatherCondition
 * Created by Linus on 8-11-2014.
 */
 public final class ConditionAndDuration {
