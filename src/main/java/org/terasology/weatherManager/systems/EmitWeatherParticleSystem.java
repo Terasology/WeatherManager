@@ -26,6 +26,7 @@ import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.characters.events.DeathEvent;
 import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
+import org.terasology.math.JomlUtil;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
 import org.terasology.network.events.DisconnectedEvent;
@@ -312,8 +313,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     if (!particleSpawners.containsKey(new Vector2f(locEmitter.x, locEmitter.z))) {
                         EntityBuilder builder = entityManager.newBuilder(prefabName);
                         builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
-                        builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                        builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
+                        builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(JomlUtil.from(minVelocity));
+                        builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(JomlUtil.from(maxVelocity));
                         builder.setPersistent(true);
                         EntityRef ref = builder.build();
                         particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
@@ -375,8 +376,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
                         EntityBuilder builder = entityManager.newBuilder(prefabName);
 
-                        builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                        builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
+                        builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(JomlUtil.from(minVelocity));
+                        builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(JomlUtil.from(maxVelocity));
                         builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
                         builder.setPersistent(true);
 
