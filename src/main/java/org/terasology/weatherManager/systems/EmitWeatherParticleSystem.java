@@ -53,7 +53,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final String RAIN = "rain";
     private static final String HAIL = "hail";
 
-    private static final int SIZE_OF_PARTICLE_AREA = 24;
+    private static final int PARTICLE_AREA_SIZE = 24;
+    private static final int PARTICLE_AREA_HALF_SIZE = PARTICLE_AREA_SIZE / 2;
     private static final int BUFFER_AMOUNT = 5;
     private static final int CLOUD_HEIGHT = 127;
 
@@ -114,8 +115,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
             clearEmitters();
             previousLocations.remove(player);
 
-            for (EntityRef ref : previousLocations.keySet()) {
-                makeNewParticleEmitters(ref);
+            for (EntityRef entity : previousLocations.keySet()) {
+                makeNewParticleEmitters(entity);
             }
         } //TODO: test the refector, multiplayer
     }
@@ -125,10 +126,10 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      * @param player The player whose effects must begin
      */
     private void begin(EntityRef player) {
-        LocationComponent loc = player.getComponent(LocationComponent.class);
+        LocationComponent location = player.getComponent(LocationComponent.class);
 
-        if (loc != null) {
-            previousLocations.put(player, new Vector3f(loc.getWorldPosition()));
+        if (location != null) {
+            previousLocations.put(player, new Vector3f(location.getWorldPosition()));
             if (!prefabName.equals(SUN)) {
                 makeNewParticleEmitters(player);
             }
@@ -196,31 +197,31 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
         if (previousLocations.containsKey(character)) {
             Vector3f center = previousLocations.get(character);
-            Vector3f pos = round(new Vector3f(event.getPosition()));
+            Vector3f position = round(new Vector3f(event.getPosition()));
 
-            if (center != null && !pos.equals(center)) {
+            if (center != null && !position.equals(center)) {
 
-                Vector3f dif = new Vector3f(center).sub(pos);
+                Vector3f offset = new Vector3f(center).sub(position);
 
-                center = new Vector3f(pos);
+                center = new Vector3f(position);
                 previousLocations.replace(character, center);
 
-                if (dif.x != 0) {
-                    if (dif.x > 0) {
+                if (offset.x != 0) {
+                    if (offset.x > 0) {
                         refreshParticles(true, false, true, center);
                     } else {
                         refreshParticles(true, false, false, center);
                     }
                 }
-                if (dif.z != 0) {
-                    if (dif.z > 0) {
+                if (offset.z != 0) {
+                    if (offset.z > 0) {
                         refreshParticles(false, true, true, center);
                     } else {
                         refreshParticles(false, true, false, center);
                     }
                 }
-                if (dif.y != 0) {
-                    if (dif.y > 0) {
+                if (offset.y != 0) {
+                    if (offset.y > 0) {
                         refreshParticles(false, false, false, center);
                     } else {
                         refreshParticles(false, true, false, center);
@@ -252,30 +253,30 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private void refreshParticles(boolean x, boolean z, boolean positive, Vector3f center) {
 
         if (!prefabName.equals(SUN)) {
-            ArrayList<Vector2f> remove = new ArrayList<>();
+            ArrayList<Vector2f> spawnersToRemoveByPosition = new ArrayList<>();
 
-            for (Vector2f vect : particleSpawners.keySet()) {
-                float distX = vect.distance(new Vector2f(center.x, vect.y));
-                float distZ = vect.distance(new Vector2f(vect.x, center.z));
-                if (distX > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT || distZ > SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT) {
-                    if (!inRange(vect)) {
-                        remove.add(vect);
-                        if (builders.containsKey(vect)) {
-                            particleSpawners.get(vect).destroy();
-                            builders.remove(vect);
+            for (Vector2f spawnerPosition : particleSpawners.keySet()) {
+                float xDistance = spawnerPosition.distance(new Vector2f(center.x, spawnerPosition.y));
+                float zDistance = spawnerPosition.distance(new Vector2f(spawnerPosition.x, center.z));
+                if (xDistance > PARTICLE_AREA_HALF_SIZE + BUFFER_AMOUNT || zDistance > PARTICLE_AREA_HALF_SIZE + BUFFER_AMOUNT) {
+                    if (!inRange(spawnerPosition)) {
+                        spawnersToRemoveByPosition.add(spawnerPosition);
+                        if (builders.containsKey(spawnerPosition)) {
+                            particleSpawners.get(spawnerPosition).destroy();
+                            builders.remove(spawnerPosition);
                         }
                     }
                 } else {
-                    Vector3f newPos = new Vector3f(vect.x, center.y + (float) SIZE_OF_PARTICLE_AREA / 3, vect.y);
-                    LocationComponent loc = builders.get(vect).getComponent(LocationComponent.class);
+                    Vector3f newPos = new Vector3f(spawnerPosition.x, center.y + PARTICLE_AREA_SIZE / 3f, spawnerPosition.y);
+                    LocationComponent loc = builders.get(spawnerPosition).getComponent(LocationComponent.class);
                     if (!loc.getWorldPosition().equals(newPos)) {
-                        builders.get(vect).getComponent(LocationComponent.class).setWorldPosition(newPos);
+                        builders.get(spawnerPosition).getComponent(LocationComponent.class).setWorldPosition(newPos);
                     }
                 }
             }
 
-            for (Vector2f toRemove : remove) {
-                particleSpawners.remove(toRemove);
+            for (Vector2f spawnerPosition : spawnersToRemoveByPosition) {
+                particleSpawners.remove(spawnerPosition);
             }
 
             float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
@@ -290,34 +291,34 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
             Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
 
             for (int i = 0; i < BUFFER_AMOUNT; i++) {
-                for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
-                    Vector3f locEmitter = new Vector3f(center);
+                for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
+                    Vector3f emitterPosition = new Vector3f(center);
 
-                    locEmitter.addY(Math.min(CLOUD_HEIGHT, (float) SIZE_OF_PARTICLE_AREA / 3));
+                    emitterPosition.addY(Math.min(CLOUD_HEIGHT, PARTICLE_AREA_SIZE / 3f));
 
                     if (x) {
                         if (positive) {
-                            locEmitter.add(-Math.round((float) SIZE_OF_PARTICLE_AREA / 2) - i, 0, j);
+                            emitterPosition.add(-PARTICLE_AREA_HALF_SIZE - i, 0, j);
                         } else {
-                            locEmitter.add(Math.round((float) SIZE_OF_PARTICLE_AREA / 2) + i, 0, j);
+                            emitterPosition.add(PARTICLE_AREA_HALF_SIZE + i, 0, j);
                         }
                     } else if (z) {
                         if (positive) {
-                            locEmitter.add(j, 0, -Math.round((float) SIZE_OF_PARTICLE_AREA / 2 - i));
+                            emitterPosition.add(j, 0, -PARTICLE_AREA_HALF_SIZE - i);
                         } else {
-                            locEmitter.add(j, 0, Math.round((float) SIZE_OF_PARTICLE_AREA / 2 + i));
+                            emitterPosition.add(j, 0, PARTICLE_AREA_HALF_SIZE + i);
                         }
                     }
 
-                    if (!particleSpawners.containsKey(new Vector2f(locEmitter.x, locEmitter.z))) {
+                    if (!particleSpawners.containsKey(new Vector2f(emitterPosition.x, emitterPosition.z))) {
                         EntityBuilder builder = entityManager.newBuilder(prefabName);
-                        builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
+                        builder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
                         builder.setPersistent(true);
                         EntityRef ref = builder.build();
-                        particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
-                        builders.put(new Vector2f(locEmitter.x, locEmitter.z), builder);
+                        particleSpawners.put(new Vector2f(emitterPosition.x, emitterPosition.z), ref);
+                        builders.put(new Vector2f(emitterPosition.x, emitterPosition.z), builder);
                     }
                 }
             }
@@ -329,13 +330,13 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     private void clearEmitters() {
         if (entityManager != null) {
-            for (EntityRef ref : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
-                if (ref.getParentPrefab() != null) {
-                    boolean isRain = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:rain");
-                    boolean isSnow = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:snow");
-                    boolean isHail = ref.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:hail");
+            for (EntityRef entity : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
+                if (entity.getParentPrefab() != null) {
+                    boolean isRain = entity.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:rain");
+                    boolean isSnow = entity.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:snow");
+                    boolean isHail = entity.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:hail");
                     if (isRain || isSnow || isHail) {
-                        ref.destroy();
+                        entity.destroy();
                     }
                 }
             }
@@ -349,13 +350,13 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      * Creates new particle emitters based on the location of the player.
      */
     private void makeNewParticleEmitters(EntityRef player) {
-        LocationComponent loc = player.getComponent(LocationComponent.class);
+        LocationComponent location = player.getComponent(LocationComponent.class);
 
-        if (loc != null && weatherManagerSystem.getCurrentWind() != null) {
+        if (location != null && weatherManagerSystem.getCurrentWind() != null) {
             particlesMade = true;
 
             if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
-                Vector3f baseLoc = round(loc.getWorldPosition());
+                Vector3f worldPosition = round(location.getWorldPosition());
 
                 float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
                 float windYAbs = Math.abs(weatherManagerSystem.getCurrentWind().y * 10);
@@ -368,21 +369,21 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 }
                 Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
 
-                for (int i = -SIZE_OF_PARTICLE_AREA / 2; i < SIZE_OF_PARTICLE_AREA / 2; i++) {
-                    for (int j = -SIZE_OF_PARTICLE_AREA / 2; j < SIZE_OF_PARTICLE_AREA / 2; j++) {
-                        Vector3f locEmitter = new Vector3f(baseLoc.x, baseLoc.y, baseLoc.z);
-                        locEmitter.add(i, (float) SIZE_OF_PARTICLE_AREA / 3, j);
+                for (int i = -PARTICLE_AREA_HALF_SIZE; i < PARTICLE_AREA_HALF_SIZE; i++) {
+                    for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
+                        Vector3f emitterPosition = new Vector3f(worldPosition);
+                        emitterPosition.add(i, PARTICLE_AREA_SIZE / 3f, j);
 
                         EntityBuilder builder = entityManager.newBuilder(prefabName);
 
                         builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
                         builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                        builder.getComponent(LocationComponent.class).setWorldPosition(locEmitter);
+                        builder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
                         builder.setPersistent(true);
 
-                        EntityRef ref = builder.build();
-                        particleSpawners.put(new Vector2f(locEmitter.x, locEmitter.z), ref);
-                        builders.put(new Vector2f(locEmitter.x, locEmitter.z), builder);
+                        EntityRef emitter = builder.build();
+                        particleSpawners.put(new Vector2f(emitterPosition.x, emitterPosition.z), emitter);
+                        builders.put(new Vector2f(emitterPosition.x, emitterPosition.z), builder);
                     }
                 }
             }
@@ -419,14 +420,14 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     /**
      * Finds if another player is within particle range of the given Vector2f.
      * Intended to be used when clearing off particles.
-     * @param emitterLoc The center location of the range.
+     * @param emitterPosition The center location of the range.
      */
-    private boolean inRange(Vector2f emitterLoc) {
+    private boolean inRange(Vector2f emitterPosition) {
 
-        for (Vector3f other : previousLocations.values()) {
-            Vector2f withoutY = new Vector2f(other.x, other.z);
+        for (Vector3f entityPosition : previousLocations.values()) {
+            Vector2f horizontalPosition = new Vector2f(entityPosition.x, entityPosition.z);
 
-            if (withoutY.distance(emitterLoc) < SIZE_OF_PARTICLE_AREA / 2 + BUFFER_AMOUNT) {
+            if (horizontalPosition.distance(emitterPosition) < PARTICLE_AREA_HALF_SIZE + BUFFER_AMOUNT) {
                 return true;
             }
         }
