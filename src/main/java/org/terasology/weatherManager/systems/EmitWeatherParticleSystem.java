@@ -25,6 +25,7 @@ import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.characters.events.DeathEvent;
 import org.terasology.logic.location.LocationComponent;
+import org.terasology.logic.players.event.OnPlayerRespawnedEvent;
 import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
@@ -55,16 +56,15 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     private static final int PARTICLE_AREA_SIZE = 24;
     private static final int PARTICLE_AREA_HALF_SIZE = PARTICLE_AREA_SIZE / 2;
+    private static final float PARTICLE_SPAWN_HEIGHT = PARTICLE_AREA_SIZE / 3f;
     private static final int BUFFER_AMOUNT = 5;
     private static final int CLOUD_HEIGHT = 127;
 
     private String prefabName = SUN;
 
-    private Map<Vector2f, EntityRef> particleSpawners;
-
-    private Map<Vector2f, EntityBuilder> builders;
-
-    private Map<EntityRef, Vector3f> previousLocations;
+    private final Map<Vector2f, EntityRef> particleSpawners = new HashMap<>();
+    private final Map<Vector2f, EntityBuilder> builders = new HashMap<>();
+    private final Map<EntityRef, Vector3f> previousLocations = new HashMap<>();
 
     private boolean particlesMade;
 
@@ -80,10 +80,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     @Override
     public void postBegin() {
         particlesMade = false;
-
-        particleSpawners = new HashMap<>();
-        builders = new HashMap<>();
-        previousLocations = new HashMap<>();
     }
 
     @ReceiveEvent
@@ -92,7 +88,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     }
 
     @ReceiveEvent
-    public void playerRespawned(OnPlayerSpawnedEvent event, EntityRef player) {
+    public void playerRespawned(OnPlayerRespawnedEvent event, EntityRef player) {
         begin(player);
     }
 
@@ -187,7 +183,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         clearEmitters();
     }
 
-     /**
+    /**
      * Moves the visual effects with the player.
      * @param event The MovedEvent.
      * @param character The entity that sent the MoveEvent.
@@ -267,7 +263,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                         }
                     }
                 } else {
-                    Vector3f newPos = new Vector3f(spawnerPosition.x, center.y + PARTICLE_AREA_SIZE / 3f, spawnerPosition.y);
+                    Vector3f newPos = new Vector3f(spawnerPosition.x, center.y + PARTICLE_SPAWN_HEIGHT, spawnerPosition.y);
                     LocationComponent loc = builders.get(spawnerPosition).getComponent(LocationComponent.class);
                     if (!loc.getWorldPosition().equals(newPos)) {
                         builders.get(spawnerPosition).getComponent(LocationComponent.class).setWorldPosition(newPos);
@@ -294,7 +290,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
                     Vector3f emitterPosition = new Vector3f(center);
 
-                    emitterPosition.addY(Math.min(CLOUD_HEIGHT, PARTICLE_AREA_SIZE / 3f));
+                    emitterPosition.addY(Math.min(CLOUD_HEIGHT, PARTICLE_SPAWN_HEIGHT));
 
                     if (x) {
                         if (positive) {
@@ -342,8 +338,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
             }
         }
 
-        builders = new HashMap<>();
-        particleSpawners = new HashMap<>();
+        builders.clear();
+        particleSpawners.clear();
     }
 
     /**
