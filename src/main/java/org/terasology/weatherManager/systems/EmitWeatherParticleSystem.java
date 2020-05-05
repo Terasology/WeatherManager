@@ -30,6 +30,7 @@ import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
 import org.terasology.network.events.DisconnectedEvent;
+import org.terasology.particles.ParticlePool;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.physics.events.MovedEvent;
@@ -365,21 +366,30 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 }
                 Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
 
+                ParticlePool particlePool = null;
+
                 for (int i = -PARTICLE_AREA_HALF_SIZE; i < PARTICLE_AREA_HALF_SIZE; i++) {
                     for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
                         Vector3f emitterPosition = new Vector3f(worldPosition);
-                        emitterPosition.add(i, PARTICLE_AREA_SIZE / 3f, j);
+                        emitterPosition.add(i, PARTICLE_SPAWN_HEIGHT, j);
 
-                        EntityBuilder builder = entityManager.newBuilder(prefabName);
+                        EntityBuilder emitterBuilder = entityManager.newBuilder(prefabName);
 
-                        builder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                        builder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                        builder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
-                        builder.setPersistent(true);
+                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
+                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
+                        emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
+                        emitterBuilder.setPersistent(true);
 
-                        EntityRef emitter = builder.build();
+                        if (particlePool != null)
+                            emitterBuilder.getComponent(ParticleEmitterComponent.class).particlePool = particlePool;
+
+                        EntityRef emitter = emitterBuilder.build();
+
+                        if (particlePool == null)
+                            particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
+
                         particleSpawners.put(new Vector2f(emitterPosition.x, emitterPosition.z), emitter);
-                        builders.put(new Vector2f(emitterPosition.x, emitterPosition.z), builder);
+                        builders.put(new Vector2f(emitterPosition.x, emitterPosition.z), emitterBuilder);
                     }
                 }
             }
