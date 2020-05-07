@@ -130,7 +130,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         triggerEvents();
 
         long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
-        delayManager.addDelayedAction(weatherEntity, "Weather", length);
+        delayManager.addDelayedAction(weatherEntity, "RandomWeather", length);
     }
 
     /**
@@ -145,8 +145,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         currentWeather = current.condition.downfallCondition.getDownfallValues().type;
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
-
-        triggerEvents();
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -160,11 +158,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
 
-        current = weatherConditionProvider.getNext();
-
-        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
-        severity = current.condition.downfallCondition.getDownfallValues().amount;
-        currentWind = current.condition.wind;
+        if (event.getActionId().equals("RandomWeather")) {
+            current = weatherConditionProvider.getNext();
+            currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+            severity = current.condition.downfallCondition.getDownfallValues().amount;
+            currentWind = current.condition.wind;
+        }
 
         triggerEvents();
 
@@ -219,7 +218,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Override
     public void postSave() {
-     triggerEvents();
+        triggerEvents();
     }
 
     public DownfallCondition.DownfallType getCurrentWeather() {
