@@ -28,8 +28,9 @@ import org.terasology.logic.location.Location;
 import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.event.OnPlayerRespawnedEvent;
 import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
-import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
+import org.terasology.network.ClientComponent;
+import org.terasology.network.events.ConnectedEvent;
 import org.terasology.network.events.DisconnectedEvent;
 import org.terasology.particles.ParticlePool;
 import org.terasology.particles.components.ParticleEmitterComponent;
@@ -41,7 +42,10 @@ import org.terasology.weatherManager.events.StartSnowEvent;
 import org.terasology.weatherManager.events.StartSunEvent;
 import org.terasology.weatherManager.weather.DownfallCondition;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 //TODO: destroy on contact with blocks (water)
@@ -54,7 +58,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final String RAIN = "rain";
     private static final String HAIL = "hail";
 
-    private static final int PARTICLE_AREA_SIZE = 24;
+    private static final int PARTICLE_AREA_SIZE = 20;
     private static final int PARTICLE_AREA_HALF_SIZE = PARTICLE_AREA_SIZE / 2;
     private static final float PARTICLE_SPAWN_HEIGHT = PARTICLE_AREA_SIZE / 3f;
     private static final int BUFFER_AMOUNT = 5;
@@ -62,9 +66,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     private String prefabName = SUN;
 
-    private final Map<Vector2f, EntityRef> particleSpawners = new HashMap<>();
-    private final Map<Vector2f, EntityBuilder> builders = new HashMap<>();
-    private final Map<EntityRef, Vector3f> previousLocations = new HashMap<>();
+    private final Map<EntityRef, List<EntityRef>> emittersByParentEntity = new HashMap<>();
 
     private boolean particlesMade;
 
@@ -92,6 +94,11 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         begin(player);
     }
 
+    @ReceiveEvent(components = ClientComponent.class)
+    public void onConnect(ConnectedEvent connected, EntityRef entity) {
+        begin(entity);
+    }
+
     @ReceiveEvent
     public void playerDied(DeathEvent event, EntityRef player) {
         end(player);
@@ -103,18 +110,14 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     }
 
     /**
-     * Ends particle effects around a given playerbegin.
+     * Ends particle effects around a given player.
      * @param player The player whose effects must be removed.
      */
     private void end(EntityRef player) {
-        if (player.hasComponent(LocationComponent.class) && previousLocations.containsKey(player)) {
-            clearEmitters();
-            previousLocations.remove(player);
-
-            for (EntityRef entity : previousLocations.keySet()) {
-                makeNewParticleEmitters(entity);
-            }
-        } //TODO: test the refector, multiplayer
+        if (emittersByParentEntity.containsKey(player)) {
+            clearEmitters(player);
+            emittersByParentEntity.remove(player);
+        }
     }
 
     /**
@@ -122,13 +125,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      * @param player The player whose effects must begin
      */
     private void begin(EntityRef player) {
-        LocationComponent location = player.getComponent(LocationComponent.class);
-
-        if (location != null) {
-            previousLocations.put(player, new Vector3f(location.getWorldPosition()));
-            if (!prefabName.equals(SUN)) {
-                beginParticles();
-            }
+        if (!prefabName.equals(SUN)) {
+            prepareParticleProperties();
+            beginParticles(player);
         }
     }
 
@@ -139,10 +138,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
-        clearEmitters();
-        prefabName = RAIN;
-
-        beginParticles();
+        if (!prefabName.equals(RAIN))
+            changeWeather(RAIN);
     }
 
     /**
@@ -152,10 +149,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
-        clearEmitters();
-        prefabName = SNOW;
-
-        beginParticles();
+        if (!prefabName.equals(SNOW))
+            changeWeather(SNOW);
     }
 
     /**
@@ -165,10 +160,19 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
-        clearEmitters();
-        prefabName = HAIL;
+        if (!prefabName.equals(HAIL))
+            changeWeather(HAIL);
+    }
 
-        beginParticles();
+    private void changeWeather(String weatherPrefab) {
+        clearAllEmitters();
+        prefabName = weatherPrefab;
+        prepareParticleProperties();
+        beginParticlesForAllEntities();
+    }
+
+    private void beginParticlesForAllEntities() {
+        emittersByParentEntity.keySet().forEach(this::beginParticles);
     }
 
     /**
@@ -179,100 +183,28 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onStartSunEvent(StartSunEvent event, EntityRef worldEntity) {
         prefabName = SUN;
-
-        clearEmitters();
+        clearAllEmitters();
     }
 
     /**
-     * Rounds a vector.
-     * @param original The original vector.
-     * @return The original vector rounded to be whole numbers.
+     * Deletes the particle emitters of all known entities.
      */
-    private Vector3f round(Vector3f original) {
-        original.x = Math.round(original.x);
-        original.y = Math.round(original.y);
-        original.z = Math.round(original.z);
-
-        return original;
-    }
-
-    /**
-     * Resets builders and particleSpawners, and destroys current entities (within range of player).
-     */
-    private void clearEmitters() {
-        if (entityManager != null) {
-            for (EntityRef entity : entityManager.getEntitiesWith(ParticleEmitterComponent.class)) {
-                if (entity.getParentPrefab() != null) {
-                    boolean isRain = entity.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:rain");
-                    boolean isSnow = entity.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:snow");
-                    boolean isHail = entity.getParentPrefab().getName().equalsIgnoreCase("WeatherManager:hail");
-                    if (isRain || isSnow || isHail) {
-                        entity.destroy();
-                    }
-                }
-            }
-        }
-
-        builders.clear();
-        particleSpawners.clear();
-    }
-
-    /**
-     * Creates new particle emitters based on the location of the player.
-     */
-    private void makeNewParticleEmitters(EntityRef player) {
-        LocationComponent location = player.getComponent(LocationComponent.class);
-
-        if (location != null && weatherManagerSystem.getCurrentWind() != null) {
-            particlesMade = true;
-
-            if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
-                Vector3f worldPosition = round(location.getWorldPosition());
-
-                float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
-                float windYAbs = Math.abs(weatherManagerSystem.getCurrentWind().y * 10);
-                Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
-                if (weatherManagerSystem.getCurrentWind().x < 0) {
-                    maxVelocity.x *= -1;
-                }
-                if (weatherManagerSystem.getCurrentWind().y < 0) {
-                    maxVelocity.z *= -1;
-                }
-                Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
-
-                ParticlePool particlePool = null;
-                float zOffset = PARTICLE_AREA_HALF_SIZE / 2f;
-
-                for (int i = -PARTICLE_AREA_HALF_SIZE; i < PARTICLE_AREA_HALF_SIZE; i++) {
-                    for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
-                        Vector3f emitterPosition = new Vector3f(worldPosition);
-                        emitterPosition.add(i, PARTICLE_SPAWN_HEIGHT, j + zOffset);
-
-                        EntityBuilder emitterBuilder = entityManager.newBuilder(prefabName);
-
-                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                        emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
-                        emitterBuilder.setPersistent(true);
-
-                        if (particlePool != null)
-                            emitterBuilder.getComponent(ParticleEmitterComponent.class).particlePool = particlePool;
-
-                        EntityRef emitter = emitterBuilder.build();
-                        if (particlePool == null)
-                            particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
-
-                        Location.attachChild(player, emitter);
-
-                        particleSpawners.put(new Vector2f(emitterPosition.x, emitterPosition.z), emitter);
-                        builders.put(new Vector2f(emitterPosition.x, emitterPosition.z), emitterBuilder);
-                    }
-                }
-            }
+    private void clearAllEmitters() {
+        for (EntityRef entity : emittersByParentEntity.keySet()) {
+            clearEmitters(entity);
         }
     }
 
-    private void beginParticles() {
+    /**
+     * Deletes the particle emitters of the specified entity.
+     */
+    private void clearEmitters(EntityRef entity) {
+        Collection<EntityRef> emitters = emittersByParentEntity.get(entity);
+        emitters.forEach(EntityRef::destroy);
+        emitters.clear();
+    }
+
+    private void prepareParticleProperties() {
         DownfallCondition.DownfallType weather = weatherManagerSystem.getCurrentWeather();
 
         if (weather != null && weatherManagerSystem.getCurrentSeverity() != null) {
@@ -292,27 +224,81 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     minDownfall = -6;
                     break;
             }
+        }
+    }
 
-            for (EntityRef ref : previousLocations.keySet()) {
-                makeNewParticleEmitters(ref);
+    /**
+     * Creates new particle emitters based on the location of the entity.
+     */
+    private void beginParticles(EntityRef entity) {
+        LocationComponent location = entity.getComponent(LocationComponent.class);
+
+        if (location != null && weatherManagerSystem.getCurrentWind() != null) {
+            particlesMade = true;
+
+            if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
+                Vector3f worldPosition = round(location.getWorldPosition());
+
+                float windXAbs = Math.abs(weatherManagerSystem.getCurrentWind().x * 10);
+                float windYAbs = Math.abs(weatherManagerSystem.getCurrentWind().y * 10);
+                Vector3f maxVelocity = new Vector3f(Math.min(1.5f, windXAbs), maxDownfall, Math.min(1.5f, windYAbs));
+                if (weatherManagerSystem.getCurrentWind().x < 0) {
+                    maxVelocity.x *= -1;
+                }
+                if (weatherManagerSystem.getCurrentWind().y < 0) {
+                    maxVelocity.z *= -1;
+                }
+                Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
+
+                List<EntityRef> emitters;
+                if (emittersByParentEntity.containsKey(entity)) {
+                    emitters = emittersByParentEntity.get(entity);
+                    emitters.clear();
+                } else {
+                    emitters = new ArrayList<>(PARTICLE_AREA_SIZE * PARTICLE_AREA_SIZE);
+                    emittersByParentEntity.put(entity, emitters);
+                }
+
+                ParticlePool particlePool = null;
+                float zOffset = PARTICLE_AREA_HALF_SIZE / 2f;
+
+                for (int i = -PARTICLE_AREA_HALF_SIZE; i < PARTICLE_AREA_HALF_SIZE; i++) {
+                    for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
+                        Vector3f emitterPosition = new Vector3f(worldPosition);
+                        emitterPosition.add(i, PARTICLE_SPAWN_HEIGHT, j + zOffset);
+
+                        EntityBuilder emitterBuilder = entityManager.newBuilder(prefabName);
+
+                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
+                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
+                        emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
+                        emitterBuilder.setPersistent(false);
+
+                        if (particlePool != null)
+                            emitterBuilder.getComponent(ParticleEmitterComponent.class).particlePool = particlePool;
+
+                        EntityRef emitter = emitterBuilder.build();
+                        if (particlePool == null)
+                            particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
+
+                        Location.attachChild(entity, emitter);
+                        emitters.add(emitter);
+                    }
+                }
             }
         }
     }
 
     /**
-     * Finds if another player is within particle range of the given Vector2f.
-     * Intended to be used when clearing off particles.
-     * @param emitterPosition The center location of the range.
+     * Rounds a vector.
+     * @param original The original vector.
+     * @return The original vector rounded to be whole numbers.
      */
-    private boolean inRange(Vector2f emitterPosition) {
+    private Vector3f round(Vector3f original) {
+        original.x = Math.round(original.x);
+        original.y = Math.round(original.y);
+        original.z = Math.round(original.z);
 
-        for (Vector3f entityPosition : previousLocations.values()) {
-            Vector2f horizontalPosition = new Vector2f(entityPosition.x, entityPosition.z);
-
-            if (horizontalPosition.distance(emitterPosition) < PARTICLE_AREA_HALF_SIZE + BUFFER_AMOUNT) {
-                return true;
-            }
-        }
-        return false;
+        return original;
     }
 }
