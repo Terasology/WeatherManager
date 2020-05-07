@@ -36,6 +36,8 @@ import org.terasology.particles.ParticlePool;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.registry.In;
+import org.terasology.utilities.random.FastRandom;
+import org.terasology.utilities.random.Random;
 import org.terasology.weatherManager.events.StartHailEvent;
 import org.terasology.weatherManager.events.StartRainEvent;
 import org.terasology.weatherManager.events.StartSnowEvent;
@@ -58,17 +60,16 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final String RAIN = "rain";
     private static final String HAIL = "hail";
 
+    private static final int PARTICLE_EMITTERS_COUNT = 100;
     private static final int PARTICLE_AREA_SIZE = 20;
     private static final int PARTICLE_AREA_HALF_SIZE = PARTICLE_AREA_SIZE / 2;
-    private static final float PARTICLE_SPAWN_HEIGHT = PARTICLE_AREA_SIZE / 3f;
-    private static final int BUFFER_AMOUNT = 5;
-    private static final int CLOUD_HEIGHT = 127;
+    private static final float PARTICLE_SPAWN_HEIGHT = 15;
+
+    private static final Random random = new FastRandom();
 
     private String prefabName = SUN;
 
     private final Map<EntityRef, List<EntityRef>> emittersByParentEntity = new HashMap<>();
-
-    private boolean particlesMade;
 
     @In
     private EntityManager entityManager;
@@ -78,11 +79,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     private int minDownfall;
     private int maxDownfall;
-
-    @Override
-    public void postBegin() {
-        particlesMade = false;
-    }
 
     @ReceiveEvent
     public void playerSpawned(OnPlayerSpawnedEvent event, EntityRef player) {
@@ -234,8 +230,6 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
         LocationComponent location = entity.getComponent(LocationComponent.class);
 
         if (location != null && weatherManagerSystem.getCurrentWind() != null) {
-            particlesMade = true;
-
             if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
                 Vector3f worldPosition = round(location.getWorldPosition());
 
@@ -248,42 +242,42 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 if (weatherManagerSystem.getCurrentWind().y < 0) {
                     maxVelocity.z *= -1;
                 }
-                Vector3f minVelocity = new Vector3f(maxVelocity.x, minDownfall, maxVelocity.z);
+                Vector3f minVelocity = new Vector3f(maxVelocity.x / 2, minDownfall, maxVelocity.z / 2);
 
                 List<EntityRef> emitters;
                 if (emittersByParentEntity.containsKey(entity)) {
                     emitters = emittersByParentEntity.get(entity);
                     emitters.clear();
                 } else {
-                    emitters = new ArrayList<>(PARTICLE_AREA_SIZE * PARTICLE_AREA_SIZE);
+                    emitters = new ArrayList<>(PARTICLE_EMITTERS_COUNT);
                     emittersByParentEntity.put(entity, emitters);
                 }
 
                 ParticlePool particlePool = null;
-                float zOffset = PARTICLE_AREA_HALF_SIZE / 2f;
 
-                for (int i = -PARTICLE_AREA_HALF_SIZE; i < PARTICLE_AREA_HALF_SIZE; i++) {
-                    for (int j = -PARTICLE_AREA_HALF_SIZE; j < PARTICLE_AREA_HALF_SIZE; j++) {
-                        Vector3f emitterPosition = new Vector3f(worldPosition);
-                        emitterPosition.add(i, PARTICLE_SPAWN_HEIGHT, j + zOffset);
+                for (int i = 0; i < PARTICLE_EMITTERS_COUNT; i++) {
+                    float relativeX = random.nextFloat() * PARTICLE_AREA_SIZE - PARTICLE_AREA_HALF_SIZE;
+                    float relativeZ = random.nextFloat() * PARTICLE_AREA_SIZE - PARTICLE_AREA_HALF_SIZE / 2f;
 
-                        EntityBuilder emitterBuilder = entityManager.newBuilder(prefabName);
+                    Vector3f emitterPosition = new Vector3f(worldPosition)
+                            .add(relativeX, PARTICLE_SPAWN_HEIGHT, relativeZ);
 
-                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                        emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                        emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
-                        emitterBuilder.setPersistent(false);
+                    EntityBuilder emitterBuilder = entityManager.newBuilder(prefabName);
 
-                        if (particlePool != null)
-                            emitterBuilder.getComponent(ParticleEmitterComponent.class).particlePool = particlePool;
+                    emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
+                    emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
+                    emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
+                    emitterBuilder.setPersistent(false);
 
-                        EntityRef emitter = emitterBuilder.build();
-                        if (particlePool == null)
-                            particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
+                    if (particlePool != null)
+                        emitterBuilder.getComponent(ParticleEmitterComponent.class).particlePool = particlePool;
 
-                        Location.attachChild(entity, emitter);
-                        emitters.add(emitter);
-                    }
+                    EntityRef emitter = emitterBuilder.build();
+                    if (particlePool == null)
+                        particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
+
+                    Location.attachChild(entity, emitter);
+                    emitters.add(emitter);
                 }
             }
         }
