@@ -61,8 +61,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final Name RAIN = new Name("rain");
     private static final Name HAIL = new Name("hail");
 
-    private static final int PARTICLE_EMITTERS_COUNT = 100;
-    private static final int PARTICLE_AREA_SIZE = 20;
+    private static final int PARTICLE_EMITTERS_COUNT = 300;
+    private static final int PARTICLE_AREA_SIZE = 25;
     private static final int PARTICLE_AREA_HALF_SIZE = PARTICLE_AREA_SIZE / 2;
     private static final float PARTICLE_SPAWN_HEIGHT = 15;
 
