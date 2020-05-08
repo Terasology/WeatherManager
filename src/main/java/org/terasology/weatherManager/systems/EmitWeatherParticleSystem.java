@@ -29,6 +29,7 @@ import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.event.OnPlayerRespawnedEvent;
 import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
 import org.terasology.math.geom.Vector3f;
+import org.terasology.naming.Name;
 import org.terasology.network.ClientComponent;
 import org.terasology.network.events.ConnectedEvent;
 import org.terasology.network.events.DisconnectedEvent;
@@ -55,10 +56,10 @@ import java.util.Map;
 @RegisterSystem(RegisterMode.CLIENT)
 public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
-    private static final String SUN = "sunny";
-    private static final String SNOW = "snow";
-    private static final String RAIN = "rain";
-    private static final String HAIL = "hail";
+    private static final Name SUN = new Name("sunny");
+    private static final Name SNOW = new Name("snow");
+    private static final Name RAIN = new Name("rain");
+    private static final Name HAIL = new Name("hail");
 
     private static final int PARTICLE_EMITTERS_COUNT = 100;
     private static final int PARTICLE_AREA_SIZE = 20;
@@ -67,7 +68,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     private static final Random random = new FastRandom();
 
-    private String prefabName = SUN;
+    private Name currentWeather = SUN;
 
     private final Map<EntityRef, List<EntityRef>> emittersByParentEntity = new HashMap<>();
 
@@ -121,7 +122,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      * @param player The player whose effects must begin
      */
     private void begin(EntityRef player) {
-        if (!prefabName.equals(SUN)) {
+        if (!currentWeather.equals(SUN)) {
             prepareParticleProperties();
             beginParticles(player);
         }
@@ -134,7 +135,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
-        if (!prefabName.equals(RAIN))
+        if (!currentWeather.equals(RAIN))
             changeWeather(RAIN);
     }
 
@@ -145,7 +146,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
-        if (!prefabName.equals(SNOW))
+        if (!currentWeather.equals(SNOW))
             changeWeather(SNOW);
     }
 
@@ -156,13 +157,13 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
-        if (!prefabName.equals(HAIL))
+        if (!currentWeather.equals(HAIL))
             changeWeather(HAIL);
     }
 
-    private void changeWeather(String weatherPrefab) {
+    private void changeWeather(Name targetWeather) {
         clearAllEmitters();
-        prefabName = weatherPrefab;
+        currentWeather = targetWeather;
         prepareParticleProperties();
         beginParticlesForAllEntities();
     }
@@ -178,7 +179,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartSunEvent(StartSunEvent event, EntityRef worldEntity) {
-        prefabName = SUN;
+        currentWeather = SUN;
         clearAllEmitters();
     }
 
@@ -262,7 +263,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     Vector3f emitterPosition = new Vector3f(worldPosition)
                             .add(relativeX, PARTICLE_SPAWN_HEIGHT, relativeZ);
 
-                    EntityBuilder emitterBuilder = entityManager.newBuilder(prefabName);
+                    EntityBuilder emitterBuilder = entityManager.newBuilder(currentWeather.toString());
 
                     emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
                     emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
