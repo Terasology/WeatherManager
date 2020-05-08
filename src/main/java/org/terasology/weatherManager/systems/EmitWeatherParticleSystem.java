@@ -37,8 +37,6 @@ import org.terasology.particles.ParticlePool;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.registry.In;
-import org.terasology.utilities.random.FastRandom;
-import org.terasology.utilities.random.Random;
 import org.terasology.weatherManager.events.StartHailEvent;
 import org.terasology.weatherManager.events.StartRainEvent;
 import org.terasology.weatherManager.events.StartSnowEvent;
@@ -50,6 +48,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 //TODO: destroy on contact with blocks (water)
 
@@ -61,12 +60,12 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final Name RAIN = new Name("rain");
     private static final Name HAIL = new Name("hail");
 
-    private static final int PARTICLE_EMITTERS_COUNT = 300;
-    private static final int PARTICLE_AREA_SIZE = 25;
+    private static final int PARTICLE_EMITTERS_COUNT = 500;
+    private static final int PARTICLE_AREA_SIZE = 15;
     private static final int PARTICLE_AREA_HALF_SIZE = PARTICLE_AREA_SIZE / 2;
     private static final float PARTICLE_SPAWN_HEIGHT = 15;
 
-    private static final Random random = new FastRandom();
+    private static final Random random = new Random();
 
     private Name currentWeather = SUN;
 
@@ -257,8 +256,8 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 ParticlePool particlePool = null;
 
                 for (int i = 0; i < PARTICLE_EMITTERS_COUNT; i++) {
-                    float relativeX = random.nextFloat() * PARTICLE_AREA_SIZE - PARTICLE_AREA_HALF_SIZE;
-                    float relativeZ = random.nextFloat() * PARTICLE_AREA_SIZE - PARTICLE_AREA_HALF_SIZE / 2f;
+                    float relativeX = (float) random.nextGaussian() * PARTICLE_AREA_HALF_SIZE;
+                    float relativeZ = (float) random.nextGaussian() * PARTICLE_AREA_HALF_SIZE + PARTICLE_AREA_HALF_SIZE / 2f;
 
                     Vector3f emitterPosition = new Vector3f(worldPosition)
                             .add(relativeX, PARTICLE_SPAWN_HEIGHT, relativeZ);
