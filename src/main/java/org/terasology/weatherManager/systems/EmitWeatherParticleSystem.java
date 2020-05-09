@@ -78,14 +78,16 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
 
     @ReceiveEvent
     public void playerRespawned(OnPlayerRespawnedEvent event, EntityRef entity) {
-        if (entityIsLocalPlayer(entity) && !currentWeather.equals(SUN))
+        if (entityIsLocalPlayer(entity) && !currentWeather.equals(SUN)) {
             beginParticles();
+        }
     }
 
     @ReceiveEvent
     public void playerDied(DeathEvent event, EntityRef entity) {
-        if (entityIsLocalPlayer(entity))
+        if (entityIsLocalPlayer(entity)) {
             clearEmitters();
+        }
     }
 
     private boolean entityIsLocalPlayer(EntityRef entity) {
@@ -99,8 +101,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
-        if (!currentWeather.equals(RAIN))
+        if (!currentWeather.equals(RAIN)) {
             changeWeather(RAIN);
+        }
     }
 
     /**
@@ -110,8 +113,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
-        if (!currentWeather.equals(SNOW))
+        if (!currentWeather.equals(SNOW)) {
             changeWeather(SNOW);
+        }
     }
 
     /**
@@ -121,16 +125,18 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
-        if (!currentWeather.equals(HAIL))
+        if (!currentWeather.equals(HAIL)) {
             changeWeather(HAIL);
+        }
     }
 
     private void changeWeather(Name targetWeather) {
         clearEmitters();
         currentWeather = targetWeather;
 
-        if (!currentWeather.equals(SUN))
+        if (!currentWeather.equals(SUN)) {
             beginParticles();
+        }
     }
 
     /**
@@ -215,12 +221,14 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
                     emitterBuilder.setPersistent(false);
 
-                    if (particlePool != null)
+                    if (particlePool != null) {
                         emitterBuilder.getComponent(ParticleEmitterComponent.class).particlePool = particlePool;
+                    }
 
                     EntityRef emitter = emitterBuilder.build();
-                    if (particlePool == null)
+                    if (particlePool == null) {
                         particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
+                    }
 
                     Location.attachChild(localPlayer.getCharacterEntity(), emitter);
                     emitters.add(emitter);
