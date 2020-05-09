@@ -19,7 +19,7 @@
   "particleEmitter": {
     "spawnRateMax": 2,
     "spawnRateMin": 1,
-    "maxParticles": 2200,
+    "maxParticles": 2500,
     "particleCollision": true,
     "destroyEntityWhenDead": true
   },

@@ -26,12 +26,10 @@ import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.characters.events.DeathEvent;
 import org.terasology.logic.location.Location;
 import org.terasology.logic.location.LocationComponent;
+import org.terasology.logic.players.LocalPlayer;
 import org.terasology.logic.players.event.OnPlayerRespawnedEvent;
-import org.terasology.logic.players.event.OnPlayerSpawnedEvent;
 import org.terasology.math.geom.Vector3f;
 import org.terasology.naming.Name;
-import org.terasology.network.ClientComponent;
-import org.terasology.network.events.ConnectedEvent;
 import org.terasology.particles.ParticlePool;
 import org.terasology.particles.components.ParticleEmitterComponent;
 import org.terasology.particles.components.generators.VelocityRangeGeneratorComponent;
@@ -64,8 +62,10 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private static final Random random = new Random();
 
     private Name currentWeather = SUN;
-    private EntityRef localPlayer = EntityRef.NULL;
     private final List<EntityRef> emitters = new ArrayList<>(PARTICLE_EMITTERS_COUNT);
+
+    @In
+    private LocalPlayer localPlayer;
 
     @In
     private EntityManager entityManager;
@@ -76,40 +76,20 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private int minDownfall;
     private int maxDownfall;
 
-    @ReceiveEvent(components = ClientComponent.class)
-    public void onConnect(ConnectedEvent connected, EntityRef entity) {
-        if (localPlayer.getId() == 0)
-            localPlayer = entity;
-
-        if (entity.getId() == localPlayer.getId())
-            begin();
-    }
-
-    @ReceiveEvent
-    public void playerSpawned(OnPlayerSpawnedEvent event, EntityRef entity) {
-        if (entity.getId() == localPlayer.getId())
-            begin();
-    }
-
     @ReceiveEvent
     public void playerRespawned(OnPlayerRespawnedEvent event, EntityRef entity) {
-        if (entity.getId() == localPlayer.getId())
-            begin();
-    }
-
-    /**
-     * Begins particle effects around the local player.
-     */
-    private void begin() {
-        if (!currentWeather.equals(SUN)) {
+        if (entityIsLocalPlayer(entity) && !currentWeather.equals(SUN))
             beginParticles();
-        }
     }
 
     @ReceiveEvent
     public void playerDied(DeathEvent event, EntityRef entity) {
-        if (entity.getId() == localPlayer.getId())
+        if (entityIsLocalPlayer(entity))
             clearEmitters();
+    }
+
+    private boolean entityIsLocalPlayer(EntityRef entity) {
+        return entity.getId() == localPlayer.getCharacterEntity().getId();
     }
 
     /**
@@ -148,7 +128,9 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
     private void changeWeather(Name targetWeather) {
         clearEmitters();
         currentWeather = targetWeather;
-        beginParticles();
+
+        if (!currentWeather.equals(SUN))
+            beginParticles();
     }
 
     /**
@@ -201,7 +183,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     private void beginParticles() {
         prepareParticleProperties();
-        LocationComponent location = localPlayer.getComponent(LocationComponent.class);
+        LocationComponent location = localPlayer.getCharacterEntity().getComponent(LocationComponent.class);
 
         if (location != null && weatherManagerSystem.getCurrentWind() != null) {
             if (!weatherManagerSystem.getCurrentWeather().equals(DownfallCondition.DownfallType.NONE)) {
@@ -240,7 +222,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                     if (particlePool == null)
                         particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
 
-                    Location.attachChild(localPlayer, emitter);
+                    Location.attachChild(localPlayer.getCharacterEntity(), emitter);
                     emitters.add(emitter);
                 }
             }
