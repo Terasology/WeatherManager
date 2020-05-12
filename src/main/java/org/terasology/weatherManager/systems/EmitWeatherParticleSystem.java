@@ -16,6 +16,8 @@
 
 package org.terasology.weatherManager.systems;
 
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.terasology.entitySystem.entity.EntityBuilder;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
@@ -28,7 +30,6 @@ import org.terasology.logic.location.Location;
 import org.terasology.logic.location.LocationComponent;
 import org.terasology.logic.players.LocalPlayer;
 import org.terasology.logic.players.event.OnPlayerRespawnedEvent;
-import org.terasology.math.geom.Vector3f;
 import org.terasology.naming.Name;
 import org.terasology.particles.ParticlePool;
 import org.terasology.particles.components.ParticleEmitterComponent;
@@ -208,17 +209,11 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                 ParticlePool particlePool = null;
 
                 for (int i = 0; i < PARTICLE_EMITTERS_COUNT; i++) {
-                    float relativeX = (float) random.nextGaussian() * PARTICLE_AREA_HALF_SIZE;
-                    float relativeZ = (float) random.nextGaussian() * PARTICLE_AREA_HALF_SIZE + PARTICLE_AREA_HALF_SIZE / 2f;
-
-                    Vector3f emitterPosition = location.getWorldPosition()
-                            .add(relativeX, PARTICLE_SPAWN_HEIGHT, relativeZ);
-
                     EntityBuilder emitterBuilder = entityManager.newBuilder(currentWeather.toString());
-
-                    emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).minVelocity.set(minVelocity);
-                    emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class).maxVelocity.set(maxVelocity);
-                    emitterBuilder.getComponent(LocationComponent.class).setWorldPosition(emitterPosition);
+                    emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class)
+                            .minVelocity.set(minVelocity.x, minVelocity.y, minVelocity.z);
+                    emitterBuilder.getComponent(VelocityRangeGeneratorComponent.class)
+                            .maxVelocity.set(maxVelocity.x, maxVelocity.y, maxVelocity.z);
                     emitterBuilder.setPersistent(false);
 
                     if (particlePool != null) {
@@ -230,7 +225,11 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
                         particlePool = emitter.getComponent(ParticleEmitterComponent.class).particlePool;
                     }
 
-                    Location.attachChild(localPlayer.getCharacterEntity(), emitter);
+                    float relativeX = (float) random.nextGaussian() * PARTICLE_AREA_HALF_SIZE;
+                    float relativeZ = (float) random.nextGaussian() * PARTICLE_AREA_HALF_SIZE + PARTICLE_AREA_SIZE / 3f;
+                    Vector3f emitterPosition = new Vector3f(relativeX, PARTICLE_SPAWN_HEIGHT, relativeZ);
+
+                    Location.attachChild(localPlayer.getCharacterEntity(), emitter, emitterPosition, new Quaternionf());
                     emitters.add(emitter);
                 }
             }
