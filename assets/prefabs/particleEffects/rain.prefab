@@ -4,8 +4,8 @@
     "texture": "WeatherManager:rain"
   },
   "energyRangeGenerator": {
-    "minEnergy": 45,
-    "maxEnergy": 45
+    "minEnergy": 4,
+    "maxEnergy": 4
   },
   "scaleRangeGenerator": {
     "minScale": [1, 1, 1],
@@ -19,7 +19,7 @@
   "particleEmitter": {
     "spawnRateMax": 2,
     "spawnRateMin": 1,
-    "maxParticles": 100,
+    "maxParticles": 2500,
     "particleCollision": true,
     "destroyEntityWhenDead": true
   },

@@ -24,10 +24,12 @@ import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
+import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
 import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
+import org.terasology.logic.players.LocalPlayer;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
@@ -46,7 +48,7 @@ import java.util.Random;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 @Share(WeatherManagerSystem.class)
-public class WeatherManagerSystem extends BaseComponentSystem {
+public class WeatherManagerSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
 
     private Vector2f currentWind;
     private Severity severity;
@@ -68,6 +70,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @In
     private WorldTime worldTime;
+
+    @In
+    private LocalPlayer localPlayer;
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
@@ -115,22 +120,30 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     }
 
     @Override
-    public void postBegin() {
+    public void update(float delta) {
+        if (localPlayer.isValid()) {
+            if (weatherEntity == null) {
+                weatherEntity = entityManager.create();
 
+                triggerEvents();
+
+                long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
+                delayManager.addDelayedAction(weatherEntity, "RandomWeather", length);
+
+                logger.info("weather activated");
+            }
+        }
+    }
+
+    @Override
+    public void postBegin() {
         float avglength = WorldTime.DAY_LENGTH / 480.0f;// / 48.0f; // worldTime.getTimeRate(); -- not available for modules
         weatherConditionProvider = new MarkovChainWeatherGenerator(12354, avglength);
         current = weatherConditionProvider.getNext();
 
-        weatherEntity = entityManager.create();
-
         currentWeather = current.condition.downfallCondition.getDownfallValues().type;
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
-
-        triggerEvents();
-
-        long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
-        delayManager.addDelayedAction(weatherEntity, "Weather", length);
     }
 
     /**
@@ -145,8 +158,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         currentWeather = current.condition.downfallCondition.getDownfallValues().type;
         severity = current.condition.downfallCondition.getDownfallValues().amount;
         currentWind = current.condition.wind;
-
-        triggerEvents();
     }
 
 //    private void makeClientsSimulationCarriers() {
@@ -160,11 +171,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
 
-        current = weatherConditionProvider.getNext();
-
-        currentWeather = current.condition.downfallCondition.getDownfallValues().type;
-        severity = current.condition.downfallCondition.getDownfallValues().amount;
-        currentWind = current.condition.wind;
+        if (event.getActionId().equals("RandomWeather")) {
+            current = weatherConditionProvider.getNext();
+            currentWeather = current.condition.downfallCondition.getDownfallValues().type;
+            severity = current.condition.downfallCondition.getDownfallValues().amount;
+            currentWind = current.condition.wind;
+        }
 
         triggerEvents();
 
@@ -219,7 +231,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Override
     public void postSave() {
-     triggerEvents();
+        triggerEvents();
     }
 
     public DownfallCondition.DownfallType getCurrentWeather() {
