@@ -29,7 +29,7 @@ import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
-import org.terasology.logic.players.LocalPlayer;
+import org.terasology.logic.players.event.LocalPlayerInitializedEvent;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
@@ -48,7 +48,7 @@ import java.util.Random;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 @Share(WeatherManagerSystem.class)
-public class WeatherManagerSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
+public class WeatherManagerSystem extends BaseComponentSystem {
 
     private Vector2f currentWind;
     private Severity severity;
@@ -70,10 +70,7 @@ public class WeatherManagerSystem extends BaseComponentSystem implements UpdateS
 
     @In
     private WorldTime worldTime;
-
-    @In
-    private LocalPlayer localPlayer;
-
+    
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
         float windX = randomWindSpeed();
@@ -119,20 +116,12 @@ public class WeatherManagerSystem extends BaseComponentSystem implements UpdateS
         return "It is now sunny.";
     }
 
-    @Override
-    public void update(float delta) {
-        if (localPlayer.isValid()) {
-            if (weatherEntity == null) {
-                weatherEntity = entityManager.create();
-
-                triggerEvents();
-
-                long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
-                delayManager.addDelayedAction(weatherEntity, "RandomWeather", length);
-
-                logger.info("weather activated");
-            }
-        }
+    @ReceiveEvent
+    public void onLocalPlayerReady(LocalPlayerInitializedEvent event, EntityRef entity) {
+        weatherEntity = entityManager.create();
+        triggerEvents(); 
+        long length = DoubleMath.roundToLong(current.duration, RoundingMode.HALF_UP);
+        delayManager.addDelayedAction(weatherEntity, "RandomWeather", length);
     }
 
     @Override
