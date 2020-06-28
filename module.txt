@@ -5,7 +5,8 @@
     "author": "Linus van Elswijk, msteiger",
     "description": "This module adds weather to the game",
     "dependencies": [
-        { "id": "MarkovChains", "minVersion": "1.5.0" }
+        { "id": "MarkovChains", "minVersion": "1.5.0" },
+        { "id": "CoreAssets", "minVersion": "2.1.0" }
     ],
     "isAugmentation": true
 }
