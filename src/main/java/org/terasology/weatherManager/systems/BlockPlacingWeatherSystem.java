@@ -39,6 +39,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     private Block air;
     private Block snow;
     private Block water;
+    private FastRandom rand = new FastRandom();
 
     @In
     private WorldProvider worldProvider;
@@ -99,17 +100,14 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     }
 
     /**
-     * Finds a spot to
-     * @param initialPos The position that the blocks should be centered around.
-     * @param toCheck The block type that we should be looking for.
-     * @return A vector with the height where the block should be placed.
+     * Finds a spot to place a block.
+     * @param toCheck the block type that we should be looking for.
+     * @param x the x position that the blocks
+     * @return a vector with the height where the block should be placed.
      * If no block should be placed, the x and z of the vector will differ from initialPos
      */
-    private Vector3i findSpot(Vector3i initialPos, Block toCheck) {
-        FastRandom rand = new FastRandom();
-        int x = (int) initialPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-        int z = (int) initialPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-        int currentY = (int) initialPos.y + SNOW_BLOCK_RANGE;
+    private Vector3i findSpot(Block toCheck, int x, int z, int initialY) {
+        int currentY = initialY + SNOW_BLOCK_RANGE;
         int iter = 0;
         boolean lastGround = false;
         while (iter < SNOW_BLOCK_RANGE * 2) {
@@ -117,15 +115,16 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
             if (current.equals(toCheck) && lastGround) {
                 return new Vector3i(x, currentY, z);
             } else if (current.equals(air)) {
-                currentY--;
                 lastGround = false;
+                currentY--;
+                Block lowerBlock = worldProvider.getBlock(x, currentY - 1, z);
+                if (!lowerBlock.equals(air) && !lowerBlock.equals(snow) && !lowerBlock.equals(water)) {
+                    lastGround = true;
+                }
             } else if (current.isPenetrable() || !current.isAttachmentAllowed()) {
-                return new Vector3i(x - 1, currentY, z - 1);
-            } else if (!current.equals(snow)) {
-                lastGround = true;
-                currentY++;
+                return new Vector3i(x - 1, currentY, z - 1); //break out; this spot won't work
             } else {
-                return new Vector3i(x - 1, currentY, z - 1); //break out to avoid double-placing snow
+                return new Vector3i(x - 1, currentY, z - 1); //break out to avoid double-placing blocks
             }
             iter++;
         }
@@ -133,30 +132,42 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     }
 
     private void placeSnow(Vector3i playerPos) {
-        Vector3i spotToPlace = findSpot(playerPos, air);
-        if (spotToPlace.x == playerPos.x && spotToPlace.y == playerPos.y) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.x);
+        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
+        if (spotToPlace.x == x && spotToPlace.z == z) {
             worldProvider.setBlock(spotToPlace, snow);
         }
     }
 
     private void meltSnow(Vector3i playerPos) {
-        Vector3i spotToPlace = findSpot(playerPos, snow);
-        if (spotToPlace.x == playerPos.x && spotToPlace.y == playerPos.y) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.x);
+        Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y);
+        if (spotToPlace.x == x && spotToPlace.z == z) {
             worldProvider.setBlock(spotToPlace, water);
         }
     }
 
     private void placeWater(Vector3i playerPos) {
-        Vector3i spotToPlace = findSpot(playerPos, air);
-        if (spotToPlace.x == playerPos.x && spotToPlace.y == playerPos.y) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.x);
+        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
+        if (spotToPlace.x == x && spotToPlace.z == z) {
             worldProvider.setBlock(spotToPlace, water);
         }
     }
 
     private void evaporateWater(Vector3i playerPos) {
-        Vector3i spotToPlace = findSpot(playerPos, water);
-        if (spotToPlace.x == playerPos.x && spotToPlace.y == playerPos.y) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.x);
+        Vector3i spotToPlace = findSpot(water, x, z, playerPos.y);
+        if (spotToPlace.x == x && spotToPlace.z == z) {
             worldProvider.setBlock(spotToPlace, air);
         }
+    }
+
+    private int getValueToPlaceBlock(int initial) {
+        return initial + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
     }
 }
