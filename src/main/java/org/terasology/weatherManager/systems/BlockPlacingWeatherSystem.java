@@ -32,6 +32,7 @@ import org.terasology.utilities.random.FastRandom;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
+import org.terasology.world.chunks.ChunkConstants;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class BlockPlacingWeatherSystem extends BaseComponentSystem {
@@ -56,7 +57,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     public void postBegin() {
         air = blockManager.getBlock("engine:air");
         snow = blockManager.getBlock("WeatherManager:snow");
-        water = blockManager.getBlock("CoreAssets:water:engine:eighthBlock");
+        water = blockManager.getBlock("CoreAssets:water");
         networkSystem = context.get(NetworkSystem.class);
     }
 
@@ -103,39 +104,42 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
      * Finds a spot to place a block.
      * @param toCheck the block type that we should be looking for.
      * @param x the x position that the blocks
-     * @return a vector with the height where the block should be placed.
-     * If no block should be placed, the x and z of the vector will differ from initialPos
+     * @return a vector with the height where the block should be placed, null if no block should be placed.
      */
     private Vector3i findSpot(Block toCheck, int x, int z, int initialY) {
         int currentY = initialY + SNOW_BLOCK_RANGE;
         int iter = 0;
-        boolean lastGround = false;
-        while (iter < SNOW_BLOCK_RANGE * 2) {
-            Block current = worldProvider.getBlock(x, currentY, z);
-            if (current.equals(toCheck) && lastGround) {
-                return new Vector3i(x, currentY, z);
-            } else if (current.equals(air)) {
-                lastGround = false;
-                currentY--;
-                Block lowerBlock = worldProvider.getBlock(x, currentY - 1, z);
-                if (!lowerBlock.equals(air) && !lowerBlock.equals(snow) && !lowerBlock.equals(water)) {
-                    lastGround = true;
-                }
-            } else if (current.isPenetrable() || !current.isAttachmentAllowed()) {
-                return new Vector3i(x - 1, currentY, z - 1); //break out; this spot won't work
-            } else {
-                return new Vector3i(x - 1, currentY, z - 1); //break out to avoid double-placing blocks
-            }
+        while (iter < SNOW_BLOCK_RANGE * 2 && worldProvider.getBlock(x, currentY, z).equals(air)) {
             iter++;
+            currentY--;
         }
-        return new Vector3i(x - 1, currentY, z - 1);
+        while (iter < SNOW_BLOCK_RANGE * 2 && !worldProvider.getBlock(x, currentY, z).equals(air)) {
+            iter++;
+            currentY++;
+        }
+        if (iter >= SNOW_BLOCK_RANGE * 2) {
+            return null;
+        }
+
+        if (worldProvider.getSunlight(x, currentY, z) != ChunkConstants.MAX_SUNLIGHT) {
+            // The block isn't actually exposed to the weather.
+            return null;
+        }
+        Block ground = worldProvider.getBlock(x, currentY-1, z);
+        if (ground.equals(toCheck)) {
+            return new Vector3i(x, currentY-1, z);
+        } else if (toCheck.equals(air) && !ground.isPenetrable() && ground.isAttachmentAllowed()) {
+            return new Vector3i(x, currentY, z);
+        } else {
+            return null;
+        }
     }
 
     private void placeSnow(Vector3i playerPos) {
         int x = getValueToPlaceBlock(playerPos.x);
         int z = getValueToPlaceBlock(playerPos.x);
         Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
-        if (spotToPlace.x == x && spotToPlace.z == z) {
+        if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, snow);
         }
     }
@@ -144,7 +148,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
         int x = getValueToPlaceBlock(playerPos.x);
         int z = getValueToPlaceBlock(playerPos.x);
         Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y);
-        if (spotToPlace.x == x && spotToPlace.z == z) {
+        if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, water);
         }
     }
@@ -153,7 +157,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
         int x = getValueToPlaceBlock(playerPos.x);
         int z = getValueToPlaceBlock(playerPos.x);
         Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
-        if (spotToPlace.x == x && spotToPlace.z == z) {
+        if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, water);
         }
     }
@@ -162,7 +166,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
         int x = getValueToPlaceBlock(playerPos.x);
         int z = getValueToPlaceBlock(playerPos.x);
         Vector3i spotToPlace = findSpot(water, x, z, playerPos.y);
-        if (spotToPlace.x == x && spotToPlace.z == z) {
+        if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, air);
         }
     }
