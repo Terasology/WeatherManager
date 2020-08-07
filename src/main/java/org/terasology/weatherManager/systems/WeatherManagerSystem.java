@@ -52,6 +52,11 @@ import java.util.Random;
 @Share(WeatherManagerSystem.class)
 public class WeatherManagerSystem extends BaseComponentSystem {
 
+    public static final String PLACE_SNOW = "placeSnow";
+    public static final String MELT_SNOW = "meltSnow";
+    public static final String EVAPORATE_WATER = "evaporateWater";
+    public static final String PLACE_WATER = "placeWater";
+
     private Vector2f currentWind;
     private Severity severity;
 
@@ -187,31 +192,31 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      */
     private void triggerEvents() {
         if (delayManager != null && weatherEntity != null) {
-            if (delayManager.hasPeriodicAction(weatherEntity, "meltSnow")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "meltSnow");
+            if (delayManager.hasPeriodicAction(weatherEntity, MELT_SNOW)) {
+                delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
             }
-            if (delayManager.hasPeriodicAction(weatherEntity, "evaporateWater")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "evaporateWater");
+            if (delayManager.hasPeriodicAction(weatherEntity, EVAPORATE_WATER)) {
+                delayManager.cancelPeriodicAction(weatherEntity, EVAPORATE_WATER);
             }
-            if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
+            if (delayManager.hasPeriodicAction(weatherEntity, PLACE_SNOW)) {
+                delayManager.cancelPeriodicAction(weatherEntity, PLACE_SNOW);
             }
-            if (delayManager.hasPeriodicAction(weatherEntity, "placeWater")) {
-                delayManager.cancelPeriodicAction(weatherEntity, "placeWater");
+            if (delayManager.hasPeriodicAction(weatherEntity, PLACE_WATER)) {
+                delayManager.cancelPeriodicAction(weatherEntity, PLACE_WATER);
             }
 
             if (currentWeather.equals(DownfallCondition.DownfallType.SNOW)) {
-                delayManager.addPeriodicAction(weatherEntity, "placeSnow", 200, 400);
+                delayManager.addPeriodicAction(weatherEntity, PLACE_SNOW, 200, 400);
             }
 
             if (currentWeather.equals(DownfallCondition.DownfallType.NONE)){
-                delayManager.addPeriodicAction(weatherEntity, "meltSnow", 150, 300);
-                delayManager.addPeriodicAction(weatherEntity, "evaporateWater", 150, 300);
+                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 150, 300);
+                delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 150, 300);
             }
 
             if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
-                delayManager.addPeriodicAction(weatherEntity, "meltSnow", 150, 300);
-                delayManager.addPeriodicAction(weatherEntity, "placeWater", 1000, 10000);
+                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 150, 300);
+                delayManager.addPeriodicAction(weatherEntity, PLACE_WATER, 1000, 10000);
             }
         }
 
@@ -237,20 +242,20 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      */
     @Override
     public void preSave() {
-        if (delayManager.hasPeriodicAction(weatherEntity, "placeSnow")) {
-            delayManager.cancelPeriodicAction(weatherEntity, "placeSnow");
+        if (delayManager.hasPeriodicAction(weatherEntity, PLACE_SNOW)) {
+            delayManager.cancelPeriodicAction(weatherEntity, PLACE_SNOW);
         }
 
-        if (delayManager.hasPeriodicAction(weatherEntity, "meltSnow")) {
-            delayManager.cancelPeriodicAction(weatherEntity, "meltSnow");
+        if (delayManager.hasPeriodicAction(weatherEntity, MELT_SNOW)) {
+            delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
         }
 
-        if (delayManager.hasPeriodicAction(weatherEntity, "placeWater")) {
-            delayManager.cancelPeriodicAction(weatherEntity, "placeWater");
+        if (delayManager.hasPeriodicAction(weatherEntity, PLACE_WATER)) {
+            delayManager.cancelPeriodicAction(weatherEntity, PLACE_WATER);
         }
 
-        if (delayManager.hasPeriodicAction(weatherEntity, "evaporateWater")) {
-            delayManager.cancelPeriodicAction(weatherEntity, "evaporateWater");
+        if (delayManager.hasPeriodicAction(weatherEntity, EVAPORATE_WATER)) {
+            delayManager.cancelPeriodicAction(weatherEntity, EVAPORATE_WATER);
         }
     }
 

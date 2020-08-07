@@ -34,6 +34,11 @@ import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
 import org.terasology.world.chunks.ChunkConstants;
 
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.EVAPORATE_WATER;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.MELT_SNOW;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.PLACE_SNOW;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.PLACE_WATER;
+
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     private static final int SNOW_BLOCK_RANGE = 40;
@@ -63,34 +68,35 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
 
     /**
      * Places snow blocks on the ground when it is snowing.
-     * The event with the id "placeSnow" will only be created when it is snowing.
+     * The event with the id PLACE_SNOW will only be created when it is snowing
+     * and the other events also correspond with the appropriate weather condition.
      * @param event The event that means it is time to place snow
      * @param worldEntity The entity that sent the event (assumed to be the player)
      */
     @ReceiveEvent
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
-        if (event.getActionId().equals("placeSnow")) {
+        if (event.getActionId().equals(PLACE_SNOW)) {
             for(Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
                 Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
 
                 placeSnow(playerPos);
             }
-        } else if (event.getActionId().equals("meltSnow")) {
+        } else if (event.getActionId().equals(MELT_SNOW)) {
             for(Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
                 Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
 
                 meltSnow(playerPos);
             }
-        }  else if (event.getActionId().equals("placeWater")) {
+        }  else if (event.getActionId().equals(PLACE_WATER)) {
             for(Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
                 Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
 
                 placeWater(playerPos);
             }
-        }  else if (event.getActionId().equals("evaporateWater")) {
+        }  else if (event.getActionId().equals(EVAPORATE_WATER)) {
             for(Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
                 Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
@@ -137,7 +143,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
 
     private void placeSnow(Vector3i playerPos) {
         int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
         Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, snow);
@@ -146,7 +152,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
 
     private void meltSnow(Vector3i playerPos) {
         int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
         Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y);
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, water);
@@ -155,7 +161,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
 
     private void placeWater(Vector3i playerPos) {
         int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
         Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, water);
@@ -164,7 +170,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
 
     private void evaporateWater(Vector3i playerPos) {
         int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
         Vector3i spotToPlace = findSpot(water, x, z, playerPos.y);
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, air);
