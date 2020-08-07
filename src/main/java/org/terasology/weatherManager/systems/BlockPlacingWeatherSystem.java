@@ -32,12 +32,20 @@ import org.terasology.utilities.random.FastRandom;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
+import org.terasology.world.chunks.ChunkConstants;
+
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.EVAPORATE_WATER;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.MELT_SNOW;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.PLACE_SNOW;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.PLACE_WATER;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     private static final int SNOW_BLOCK_RANGE = 40;
     private Block air;
     private Block snow;
+    private Block water;
+    private FastRandom rand = new FastRandom();
 
     @In
     private WorldProvider worldProvider;
@@ -54,85 +62,122 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     public void postBegin() {
         air = blockManager.getBlock("engine:air");
         snow = blockManager.getBlock("WeatherManager:snow");
+        water = blockManager.getBlock("CoreAssets:water");
         networkSystem = context.get(NetworkSystem.class);
     }
 
     /**
      * Places snow blocks on the ground when it is snowing.
-     * The event with the id "placeSnow" will only be created when it is snowing.
+     * The event with the id PLACE_SNOW will only be created when it is snowing
+     * and the other events also correspond with the appropriate weather condition.
      * @param event The event that means it is time to place snow
      * @param worldEntity The entity that sent the event (assumed to be the player)
      */
     @ReceiveEvent
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
-        if (event.getActionId().equals("placeSnow")) {
+        if (event.getActionId().equals(PLACE_SNOW)) {
             for(Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
                 Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
 
                 placeSnow(playerPos);
             }
-        } else if (event.getActionId().equals("removeSnow")) {
+        } else if (event.getActionId().equals(MELT_SNOW)) {
             for(Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
                 Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
 
-                removeSnow(playerPos);
+                meltSnow(playerPos);
             }
+        }  else if (event.getActionId().equals(PLACE_WATER)) {
+            for(Client currentPlayer : networkSystem.getPlayers()) {
+                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+
+                placeWater(playerPos);
+            }
+        }  else if (event.getActionId().equals(EVAPORATE_WATER)) {
+            for(Client currentPlayer : networkSystem.getPlayers()) {
+                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+
+                evaporateWater(playerPos);
+            }
+        }
+    }
+
+    /**
+     * Finds a spot to place a block.
+     * @param toCheck the block type that we should be looking for.
+     * @param x the x position that the blocks
+     * @return a vector with the height where the block should be placed, null if no block should be placed.
+     */
+    private Vector3i findSpot(Block toCheck, int x, int z, int initialY) {
+        int currentY = initialY + SNOW_BLOCK_RANGE;
+        int iter = 0;
+        while (iter < SNOW_BLOCK_RANGE * 2 && worldProvider.getBlock(x, currentY, z).equals(air)) {
+            iter++;
+            currentY--;
+        }
+        while (iter < SNOW_BLOCK_RANGE * 2 && !worldProvider.getBlock(x, currentY, z).equals(air)) {
+            iter++;
+            currentY++;
+        }
+        if (iter >= SNOW_BLOCK_RANGE * 2) {
+            return null;
+        }
+
+        if (worldProvider.getSunlight(x, currentY, z) != ChunkConstants.MAX_SUNLIGHT) {
+            // The block isn't actually exposed to the weather.
+            return null;
+        }
+        Block ground = worldProvider.getBlock(x, currentY-1, z);
+        if (ground.equals(toCheck)) {
+            return new Vector3i(x, currentY-1, z);
+        } else if (toCheck.equals(air) && !ground.isPenetrable() && ground.isAttachmentAllowed()) {
+            return new Vector3i(x, currentY, z);
+        } else {
+            return null;
         }
     }
 
     private void placeSnow(Vector3i playerPos) {
-        FastRandom rand = new FastRandom();
-        int x = (int) playerPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-        int z = (int) playerPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-        int currentY = (int) playerPos.y + SNOW_BLOCK_RANGE;
-        int iter = 0;
-        boolean lastGround = false;
-        boolean placed = false;
-        while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
-            Block current = worldProvider.getBlock(x, currentY, z);
-            if (current.equals(air) && lastGround) {
-                worldProvider.setBlock(new Vector3i(x, currentY, z), snow);
-                placed = true;
-            } else if (current.equals(air)) {
-                currentY--;
-                lastGround = false;
-            } else if (current.isPenetrable() || !current.isAttachmentAllowed()) {
-                break;
-            } else if (!current.equals(snow)) {
-                lastGround = true;
-                currentY++;
-            } else {
-                placed = true; //break out to avoid double-placing snow
-            }
-            iter++;
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
+        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
+        if (spotToPlace != null) {
+            worldProvider.setBlock(spotToPlace, snow);
         }
     }
 
-    private void removeSnow(Vector3i playerPos) {
-        FastRandom rand = new FastRandom();
-        int x = (int) playerPos.x + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-        int z = (int) playerPos.z + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
-        int currentY = (int) playerPos.y + SNOW_BLOCK_RANGE;
-        int iter = 0;
-        boolean lastGround = false;
-        boolean placed = false;
-        while (!placed || iter < SNOW_BLOCK_RANGE * 2) {
-            Block current = worldProvider.getBlock(x, currentY, z);
-            if (current.equals(snow)) {
-                worldProvider.setBlock(new Vector3i(x, currentY, z), air);
-                placed = true;
-            } else if (lastGround) {
-                placed = true; //break out if there is no snow
-            } else if (current.equals(air)) {
-                currentY--;
-                lastGround = false;
-            } else {
-                lastGround = true;
-                currentY++;
-            }
-            iter++;
+    private void meltSnow(Vector3i playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
+        Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y);
+        if (spotToPlace != null) {
+            worldProvider.setBlock(spotToPlace, water);
         }
+    }
+
+    private void placeWater(Vector3i playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
+        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
+        if (spotToPlace != null) {
+            worldProvider.setBlock(spotToPlace, water);
+        }
+    }
+
+    private void evaporateWater(Vector3i playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x);
+        int z = getValueToPlaceBlock(playerPos.z);
+        Vector3i spotToPlace = findSpot(water, x, z, playerPos.y);
+        if (spotToPlace != null) {
+            worldProvider.setBlock(spotToPlace, air);
+        }
+    }
+
+    private int getValueToPlaceBlock(int initial) {
+        return initial + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
     }
 }

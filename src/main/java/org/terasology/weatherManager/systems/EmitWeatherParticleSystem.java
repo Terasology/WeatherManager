@@ -102,9 +102,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartRainEvent(StartRainEvent event, EntityRef worldEntity) {
-        if (!currentWeather.equals(RAIN)) {
-            changeWeather(RAIN);
-        }
+        changeWeather(RAIN);
     }
 
     /**
@@ -114,9 +112,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartSnowEvent(StartSnowEvent event, EntityRef worldEntity) {
-        if (!currentWeather.equals(SNOW)) {
-            changeWeather(SNOW);
-        }
+        changeWeather(SNOW);
     }
 
     /**
@@ -126,9 +122,7 @@ public class EmitWeatherParticleSystem extends BaseComponentSystem {
      */
     @ReceiveEvent
     public void onStartHailEvent(StartHailEvent event, EntityRef worldEntity) {
-        if (!currentWeather.equals(HAIL)) {
-            changeWeather(HAIL);
-        }
+        changeWeather(HAIL);
     }
 
     private void changeWeather(Name targetWeather) {
