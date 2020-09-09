@@ -3,7 +3,7 @@
 
 package org.terasology.weatherManager.components;
 
-import org.terasology.entitySystem.Component;
+import org.terasology.engine.entitySystem.Component;
 
 public class WeatherBase implements Component {
 }

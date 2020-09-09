@@ -1,18 +1,5 @@
-/*
- * Copyright 2015 MovingBlocks
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2020 The Terasology Foundation
+// SPDX-License-Identifier: Apache-2.0
 package org.terasology.weatherManager.weather;
 
 import com.google.common.base.Preconditions;
@@ -22,28 +9,18 @@ import java.util.Map;
 
 /**
  * Pseudo enum class to describe different downfall conditions of the weather.
- *
+ * <p>
  * Can be compared with "==", since only one instance will be created for each combination of values.
  */
 public final class DownfallCondition {
     private static final Map<DownfallValues, DownfallCondition> INSTANCES = new HashMap<>();
 
     public static final DownfallCondition NO_DOWNFALL = get(Severity.NONE, DownfallType.NONE, false);
-    
+
     private final DownfallValues downfallValues;
 
     private DownfallCondition(final DownfallValues values) {
         this.downfallValues = values;
-    }
-
-    @Override
-    public String toString() {
-        return downfallValues.toString();
-    }
-
-    @Override
-    public int hashCode() {
-        return downfallValues.hashCode();
     }
 
     public static DownfallCondition get(final Severity amount, final DownfallType type, final boolean withThunder) {
@@ -64,7 +41,7 @@ public final class DownfallCondition {
         // body
         final DownfallValues values = new DownfallValues(amount, type, withThunder);
 
-        if(INSTANCES.containsKey(values)) {
+        if (INSTANCES.containsKey(values)) {
             return INSTANCES.get(values);
         } else {
             DownfallCondition ret = new DownfallCondition(values);
@@ -77,7 +54,21 @@ public final class DownfallCondition {
         */
     }
 
-    public static enum DownfallType {
+    @Override
+    public String toString() {
+        return downfallValues.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return downfallValues.hashCode();
+    }
+
+    public DownfallValues getDownfallValues() {
+        return downfallValues;
+    }
+
+    public enum DownfallType {
         NONE("none"),
         RAIN("rain"),
         HAIL("hail"),
@@ -85,7 +76,7 @@ public final class DownfallCondition {
 
         private final String string;
 
-        private DownfallType(String string) {
+        DownfallType(String string) {
             this.string = string;
         }
 
@@ -122,12 +113,12 @@ public final class DownfallCondition {
 
         @Override
         public boolean equals(Object other) {
-            if(other != null && other instanceof DownfallValues) {
-                DownfallValues otherDownfallValues = (DownfallValues)other;
+            if (other != null && other instanceof DownfallValues) {
+                DownfallValues otherDownfallValues = (DownfallValues) other;
 
                 return otherDownfallValues.type == this.type &&
-                       otherDownfallValues.amount == this.amount &&
-                       otherDownfallValues.withThunder == this.withThunder;
+                        otherDownfallValues.amount == this.amount &&
+                        otherDownfallValues.withThunder == this.withThunder;
             }
 
             return false;
@@ -136,12 +127,8 @@ public final class DownfallCondition {
         @Override
         public int hashCode() {
             return type.ordinal() +
-                   DownfallType.values().length * amount.ordinal() +
+                    DownfallType.values().length * amount.ordinal() +
                     DownfallType.values().length * Severity.values().length * (withThunder ? 1 : 0);
         }
-    }
-
-    public DownfallValues getDownfallValues() {
-        return downfallValues;
     }
 }
