@@ -29,6 +29,7 @@ import org.terasology.registry.In;
 import org.terasology.registry.Share;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
+import org.terasology.world.block.BlockRegion;
 import org.terasology.world.time.WorldTimeEvent;
 
 /**
@@ -64,10 +65,10 @@ public class CloudUpdateManager extends BaseComponentSystem {
         logger.debug("Cloud layer update started...");
 
         int cnt = 0;
-        for (Region3i reg : worldProvider.getRelevantRegions()) {
-            if (reg.minY() <= height && height <= reg.maxY()) {
-                for (int z = reg.minZ(); z <= reg.maxZ(); z++) {
-                    for (int x = reg.minX(); x <= reg.maxX(); x++) {
+        for (BlockRegion reg : worldProvider.getRelevantRegions()) {
+            if (reg.getMinY() <= height && height <= reg.getMaxY()) {
+                for (int z = reg.getMinZ(); z <= reg.getMaxZ(); z++) {
+                    for (int x = reg.getMinX(); x <= reg.getMaxX(); x++) {
                         boolean isClouded = cloudProvider.isClouded(x, z, anim);
                         Block oldBlock = worldProvider.getBlock(x, height, z);
                         Block block = cloudRasterizer.getBlock(isClouded, oldBlock);

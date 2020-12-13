@@ -17,6 +17,7 @@
 package org.terasology.weatherManager.clouds;
 
 import org.terasology.math.Region3i;
+import org.terasology.world.block.BlockRegion;
 import org.terasology.world.generation.Border3D;
 import org.terasology.world.generation.facets.base.BaseBooleanFieldFacet2D;
 
@@ -28,7 +29,7 @@ public class CloudFacet extends BaseBooleanFieldFacet2D {
 
     private final int height;
 
-    public CloudFacet(int height, Region3i targetRegion, Border3D border) {
+    public CloudFacet(int height, BlockRegion targetRegion, Border3D border) {
         super(targetRegion, border);
 
         this.height = height;
