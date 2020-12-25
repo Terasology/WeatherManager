@@ -23,7 +23,6 @@ import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.math.Region3i;
 import org.terasology.math.geom.Vector3i;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
@@ -66,9 +65,9 @@ public class CloudUpdateManager extends BaseComponentSystem {
 
         int cnt = 0;
         for (BlockRegion reg : worldProvider.getRelevantRegions()) {
-            if (reg.getMinY() <= height && height <= reg.getMaxY()) {
-                for (int z = reg.getMinZ(); z <= reg.getMaxZ(); z++) {
-                    for (int x = reg.getMinX(); x <= reg.getMaxX(); x++) {
+            if (reg.minY() <= height && height <= reg.maxY()) {
+                for (int z = reg.minZ(); z <= reg.maxZ(); z++) {
+                    for (int x = reg.minX(); x <= reg.maxX(); x++) {
                         boolean isClouded = cloudProvider.isClouded(x, z, anim);
                         Block oldBlock = worldProvider.getBlock(x, height, z);
                         Block block = cloudRasterizer.getBlock(isClouded, oldBlock);
