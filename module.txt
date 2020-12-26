@@ -1,6 +1,6 @@
 {
     "id": "WeatherManager",
-    "version": "1.0.0",
+    "version": "1.0.0-SNAPSHOT",
     "displayName": "Weather Manager",
     "author": "Linus van Elswijk, msteiger",
     "description": "This module adds weather to the game",

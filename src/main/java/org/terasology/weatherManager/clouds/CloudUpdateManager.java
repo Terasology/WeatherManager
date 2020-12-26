@@ -23,12 +23,12 @@ import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.math.Region3i;
 import org.terasology.math.geom.Vector3i;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
+import org.terasology.world.block.BlockRegion;
 import org.terasology.world.time.WorldTimeEvent;
 
 /**
@@ -64,7 +64,7 @@ public class CloudUpdateManager extends BaseComponentSystem {
         logger.debug("Cloud layer update started...");
 
         int cnt = 0;
-        for (Region3i reg : worldProvider.getRelevantRegions()) {
+        for (BlockRegion reg : worldProvider.getRelevantRegions()) {
             if (reg.minY() <= height && height <= reg.maxY()) {
                 for (int z = reg.minZ(); z <= reg.maxZ(); z++) {
                     for (int x = reg.minX(); x <= reg.maxX(); x++) {
