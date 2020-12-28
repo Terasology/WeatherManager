@@ -1,21 +1,12 @@
-/*
- * Copyright 2018 MovingBlocks
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2020 The Terasology Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.weatherManager.systems;
 
+import org.joml.RoundingMode;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 import org.terasology.context.Context;
 import org.terasology.entitySystem.entity.EntityRef;
 import org.terasology.entitySystem.event.ReceiveEvent;
@@ -24,7 +15,6 @@ import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.logic.delay.PeriodicActionTriggeredEvent;
 import org.terasology.logic.location.LocationComponent;
-import org.terasology.math.geom.Vector3i;
 import org.terasology.network.Client;
 import org.terasology.network.NetworkSystem;
 import org.terasology.registry.In;
@@ -67,39 +57,41 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     }
 
     /**
-     * Places snow blocks on the ground when it is snowing.
-     * The event with the id PLACE_SNOW will only be created when it is snowing
-     * and the other events also correspond with the appropriate weather condition.
+     * Places snow blocks on the ground when it is snowing. The event with the id PLACE_SNOW will only be created when
+     * it is snowing and the other events also correspond with the appropriate weather condition.
+     *
      * @param event The event that means it is time to place snow
      * @param worldEntity The entity that sent the event (assumed to be the player)
      */
     @ReceiveEvent
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
+        final Vector3f position = new Vector3f();
+        final Vector3i blockPos = new Vector3i();
         if (event.getActionId().equals(PLACE_SNOW)) {
-            for(Client currentPlayer : networkSystem.getPlayers()) {
+            for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
 
                 placeSnow(playerPos);
             }
         } else if (event.getActionId().equals(MELT_SNOW)) {
-            for(Client currentPlayer : networkSystem.getPlayers()) {
+            for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
 
                 meltSnow(playerPos);
             }
-        }  else if (event.getActionId().equals(PLACE_WATER)) {
-            for(Client currentPlayer : networkSystem.getPlayers()) {
+        } else if (event.getActionId().equals(PLACE_WATER)) {
+            for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
 
                 placeWater(playerPos);
             }
-        }  else if (event.getActionId().equals(EVAPORATE_WATER)) {
-            for(Client currentPlayer : networkSystem.getPlayers()) {
+        } else if (event.getActionId().equals(EVAPORATE_WATER)) {
+            for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = new Vector3i(locComp.getWorldPosition());
+                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
 
                 evaporateWater(playerPos);
             }
@@ -108,6 +100,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
 
     /**
      * Finds a spot to place a block.
+     *
      * @param toCheck the block type that we should be looking for.
      * @param x the x position that the blocks
      * @return a vector with the height where the block should be placed, null if no block should be placed.
@@ -131,9 +124,9 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
             // The block isn't actually exposed to the weather.
             return null;
         }
-        Block ground = worldProvider.getBlock(x, currentY-1, z);
+        Block ground = worldProvider.getBlock(x, currentY - 1, z);
         if (ground.equals(toCheck)) {
-            return new Vector3i(x, currentY-1, z);
+            return new Vector3i(x, currentY - 1, z);
         } else if (toCheck.equals(air) && !ground.isPenetrable() && ground.isAttachmentAllowed()) {
             return new Vector3i(x, currentY, z);
         } else {
@@ -141,37 +134,37 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
         }
     }
 
-    private void placeSnow(Vector3i playerPos) {
-        int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.z);
-        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
+    private void placeSnow(Vector3ic playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x());
+        int z = getValueToPlaceBlock(playerPos.z());
+        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y());
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, snow);
         }
     }
 
-    private void meltSnow(Vector3i playerPos) {
-        int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.z);
-        Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y);
+    private void meltSnow(Vector3ic playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x());
+        int z = getValueToPlaceBlock(playerPos.z());
+        Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y());
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, water);
         }
     }
 
-    private void placeWater(Vector3i playerPos) {
-        int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.z);
-        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y);
+    private void placeWater(Vector3ic playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x());
+        int z = getValueToPlaceBlock(playerPos.z());
+        Vector3i spotToPlace = findSpot(air, x, z, playerPos.y());
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, water);
         }
     }
 
-    private void evaporateWater(Vector3i playerPos) {
-        int x = getValueToPlaceBlock(playerPos.x);
-        int z = getValueToPlaceBlock(playerPos.z);
-        Vector3i spotToPlace = findSpot(water, x, z, playerPos.y);
+    private void evaporateWater(Vector3ic playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x());
+        int z = getValueToPlaceBlock(playerPos.z());
+        Vector3i spotToPlace = findSpot(water, x, z, playerPos.y());
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, air);
         }
