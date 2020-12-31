@@ -67,30 +67,35 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
         final Vector3f position = new Vector3f();
         final Vector3i playerPos = new Vector3i();
-        if (event.getActionId().equals(PLACE_SNOW)) {
-            for (Client currentPlayer : networkSystem.getPlayers()) {
-                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-                placeSnow(playerPos);
-            }
-        } else if (event.getActionId().equals(MELT_SNOW)) {
-            for (Client currentPlayer : networkSystem.getPlayers()) {
-                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-                meltSnow(playerPos);
-            }
-        } else if (event.getActionId().equals(PLACE_WATER)) {
-            for (Client currentPlayer : networkSystem.getPlayers()) {
-                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-                placeWater(playerPos);
-            }
-        } else if (event.getActionId().equals(EVAPORATE_WATER)) {
-            for (Client currentPlayer : networkSystem.getPlayers()) {
-                LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-                evaporateWater(playerPos);
-            }
+        switch (event.getActionId()) {
+            case PLACE_SNOW:
+                for (Client currentPlayer : networkSystem.getPlayers()) {
+                    LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                    playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
+                    placeSnow(playerPos);
+                }
+                break;
+            case MELT_SNOW:
+                for (Client currentPlayer : networkSystem.getPlayers()) {
+                    LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                    playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
+                    meltSnow(playerPos);
+                }
+                break;
+            case PLACE_WATER:
+                for (Client currentPlayer : networkSystem.getPlayers()) {
+                    LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                    playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
+                    placeWater(playerPos);
+                }
+                break;
+            case EVAPORATE_WATER:
+                for (Client currentPlayer : networkSystem.getPlayers()) {
+                    LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                    playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
+                    evaporateWater(playerPos);
+                }
+                break;
         }
     }
 
