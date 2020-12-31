@@ -66,33 +66,29 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
     @ReceiveEvent
     public void onPlaceEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
         final Vector3f position = new Vector3f();
-        final Vector3i blockPos = new Vector3i();
+        final Vector3i playerPos = new Vector3i();
         if (event.getActionId().equals(PLACE_SNOW)) {
             for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-
+                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
                 placeSnow(playerPos);
             }
         } else if (event.getActionId().equals(MELT_SNOW)) {
             for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-
+                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
                 meltSnow(playerPos);
             }
         } else if (event.getActionId().equals(PLACE_WATER)) {
             for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-
+                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
                 placeWater(playerPos);
             }
         } else if (event.getActionId().equals(EVAPORATE_WATER)) {
             for (Client currentPlayer : networkSystem.getPlayers()) {
                 LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-                Vector3i playerPos = blockPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-
+                playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
                 evaporateWater(playerPos);
             }
         }
