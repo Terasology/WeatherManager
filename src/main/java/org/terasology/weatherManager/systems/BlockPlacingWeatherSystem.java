@@ -22,7 +22,7 @@ import org.terasology.utilities.random.FastRandom;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
-import org.terasology.world.chunks.ChunkConstants;
+import org.terasology.world.chunks.Chunks;
 
 import static org.terasology.weatherManager.systems.WeatherManagerSystem.EVAPORATE_WATER;
 import static org.terasology.weatherManager.systems.WeatherManagerSystem.MELT_SNOW;
@@ -121,7 +121,7 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
             return null;
         }
 
-        if (worldProvider.getSunlight(x, currentY, z) != ChunkConstants.MAX_SUNLIGHT) {
+        if (worldProvider.getSunlight(x, currentY, z) != Chunks.MAX_SUNLIGHT) {
             // The block isn't actually exposed to the weather.
             return null;
         }
