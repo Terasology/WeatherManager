@@ -57,7 +57,11 @@ public class CloudProvider implements FacetProviderPlugin {
 
         float anim = cloudManager.getAnimFrame();
 
-        BlockAreac reg = facet.getRelativeArea();
+for (Vector2ic pos: facet.getRelativeArea()) {
+	if (isClouded(pos.x(), pos.y(), anim)) {
+    	facet.setWorld(pos, true);
+    }
+}
 
         for (int y = reg.minY(); y <= reg.maxY(); y++) {
             for (int x = reg.minX(); x <= reg.maxX(); x++) {
