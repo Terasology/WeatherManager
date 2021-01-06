@@ -16,10 +16,12 @@
 
 package org.terasology.weatherManager.clouds;
 
+import org.joml.Vector2ic;
 import org.terasology.math.geom.Rect2i;
 import org.terasology.registry.CoreRegistry;
 import org.terasology.utilities.procedural.BrownianNoise3D;
 import org.terasology.utilities.procedural.PerlinNoise;
+import org.terasology.world.block.BlockAreac;
 import org.terasology.world.generation.Border3D;
 import org.terasology.world.generation.FacetProviderPlugin;
 import org.terasology.world.generation.GeneratingRegion;
@@ -56,13 +58,9 @@ public class CloudProvider implements FacetProviderPlugin {
 
         float anim = cloudManager.getAnimFrame();
 
-        Rect2i reg = facet.getWorldRegion();
-
-        for (int y = reg.minY(); y <= reg.maxY(); y++) {
-            for (int x = reg.minX(); x <= reg.maxX(); x++) {
-                if (isClouded(x, y, anim)) {
-                    facet.setWorld(x, y, true);
-                }
+        for (Vector2ic pos: facet.getRelativeArea()) {
+            if (isClouded(pos.x(), pos.y(), anim)) {
+                facet.setWorld(pos, true);
             }
         }
 
