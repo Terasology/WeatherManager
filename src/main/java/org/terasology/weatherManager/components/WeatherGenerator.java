@@ -15,8 +15,8 @@
  */
 package org.terasology.weatherManager.components;
 
+import org.joml.Vector2i;
 import org.terasology.entitySystem.Component;
-import org.terasology.math.geom.Vector2i;
 
 public class WeatherGenerator implements Component {
     Vector2i position;
