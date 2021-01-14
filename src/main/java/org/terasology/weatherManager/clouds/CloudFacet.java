@@ -16,14 +16,12 @@
 
 package org.terasology.weatherManager.clouds;
 
-import org.terasology.math.Region3i;
 import org.terasology.world.block.BlockRegion;
 import org.terasology.world.generation.Border3D;
 import org.terasology.world.generation.facets.base.BaseBooleanFieldFacet2D;
 
 /**
  * Defines a 2D layer of clouds.
- * @author Martin Steiger
  */
 public class CloudFacet extends BaseBooleanFieldFacet2D {
 

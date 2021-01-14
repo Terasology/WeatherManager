@@ -24,7 +24,6 @@ import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
 import org.terasology.logic.console.commandSystem.annotations.Command;
 import org.terasology.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.logic.delay.DelayManager;

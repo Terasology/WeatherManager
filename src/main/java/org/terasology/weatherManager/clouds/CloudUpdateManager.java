@@ -31,10 +31,6 @@ import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockRegion;
 import org.terasology.world.time.WorldTimeEvent;
 
-/**
- * TODO Type description
- * @author Martin Steiger
- */
 @RegisterSystem(RegisterMode.AUTHORITY)
 @Share(CloudUpdateManager.class)
 public class CloudUpdateManager extends BaseComponentSystem {

@@ -17,7 +17,6 @@
 package org.terasology.weatherManager.clouds;
 
 import org.terasology.registry.CoreRegistry;
-import org.terasology.registry.In;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
 import org.terasology.world.chunks.CoreChunk;
