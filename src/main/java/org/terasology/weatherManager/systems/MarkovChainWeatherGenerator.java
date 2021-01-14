@@ -15,10 +15,10 @@
  */
 package org.terasology.weatherManager.systems;
 
+import org.joml.Vector2f;
 import org.terasology.markovChains.RawMarkovChain;
 import org.terasology.markovChains.dataStructures.TransitionMatrix;
 import org.terasology.math.TeraMath;
-import org.terasology.math.geom.Vector2f;
 import org.terasology.utilities.random.FastRandom;
 import org.terasology.utilities.random.Random;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
@@ -126,7 +126,7 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
     private int[] cloudinessHistory = new int[2];
     private int[] precipitationHistory = new int[2];
-    private Vector2f previousWind;
+    private Vector2f previousWind = new Vector2f();
 
     private final Random randomNumberGenerator;
 
@@ -172,7 +172,7 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
         this.randomNumberGenerator = new FastRandom(seed);
         //weatherMarkovChain = new MarkovChain<WeatherCondition>(Arrays.asList(WeatherCondition.values()), FIRST_ORDER_CONDITION_TRANSITION_MATRIX, randomNumberGenerator);
 
-        previousWind = new Vector2f(1.0f, 0.0f);
+        previousWind.set(1.0f, 0.0f);
 
         // warm up: produce a believable initial history using the transition matrix;
         for (int i = 0; i < 8; i++) {
@@ -210,7 +210,7 @@ public class MarkovChainWeatherGenerator implements WeatherConditionProvider {
 
 
         // update wind state
-        previousWind = nextWindCondition();
+        previousWind.set(nextWindCondition());
 
         // now put generated values into a WeatherCondition object
         DownfallCondition downfallCondition =

@@ -15,19 +15,19 @@
  */
 package org.terasology.weatherManager.weather;
 
-import org.terasology.math.geom.Vector2f;
+import org.joml.Vector2f;
+import org.joml.Vector2fc;
 
 /**
  * Simple data class which describes in game weather condition
- * Created by Linus on 5-11-2014.
  */
 public final class WeatherCondition {
 
     public final Severity cloudiness;
     public final DownfallCondition downfallCondition;
-    public final Vector2f wind;
+    public final Vector2fc wind;
 
-    public WeatherCondition(final Severity cloudiness, final DownfallCondition downfallCondition, final Vector2f wind) {
+    public WeatherCondition(final Severity cloudiness, final DownfallCondition downfallCondition, final Vector2fc wind) {
         this.cloudiness = cloudiness;
         this.downfallCondition = downfallCondition;
         this.wind = new Vector2f(wind);

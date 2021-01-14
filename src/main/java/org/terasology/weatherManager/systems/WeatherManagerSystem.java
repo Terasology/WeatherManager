@@ -17,6 +17,7 @@
 package org.terasology.weatherManager.systems;
 
 import com.google.common.math.DoubleMath;
+import org.joml.Vector2f;
 import org.slf4j.LoggerFactory;
 import org.terasology.entitySystem.entity.EntityManager;
 import org.terasology.entitySystem.entity.EntityRef;
@@ -29,7 +30,6 @@ import org.terasology.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.logic.delay.DelayManager;
 import org.terasology.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.logic.players.event.LocalPlayerInitializedEvent;
-import org.terasology.math.geom.Vector2f;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
 import org.terasology.weatherManager.components.WeatherBase;
@@ -56,7 +56,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static final String EVAPORATE_WATER = "evaporateWater";
     public static final String PLACE_WATER = "placeWater";
 
-    private Vector2f currentWind;
+    private Vector2f currentWind = new Vector2f();
     private Severity severity;
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
@@ -116,7 +116,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     @Command(shortDescription = "Make it sunny", helpText = "Changes the weather to sunny for some time")
     public String makeSunny(@CommandParam(value = "time") int time) {
         DownfallCondition condition = DownfallCondition.get(Severity.NONE,  DownfallCondition.DownfallType.NONE, false);
-        WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, Vector2f.zero());
+        WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
         return "It is now sunny.";
@@ -162,7 +162,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         currentWeather = current.condition.downfallCondition.getDownfallValues().type;
         severity = current.condition.downfallCondition.getDownfallValues().amount;
-        currentWind = current.condition.wind;
+        currentWind.set(current.condition.wind);
         triggerEvents();
     }
 
@@ -180,7 +180,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             current = weatherConditionProvider.getNext();
             currentWeather = current.condition.downfallCondition.getDownfallValues().type;
             severity = current.condition.downfallCondition.getDownfallValues().amount;
-            currentWind = current.condition.wind;
+            currentWind.set(current.condition.wind);
             triggerEvents();
             logger.debug("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
         }
