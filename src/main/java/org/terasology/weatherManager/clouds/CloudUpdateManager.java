@@ -16,6 +16,7 @@
 
 package org.terasology.weatherManager.clouds;
 
+import org.joml.Vector3i;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terasology.entitySystem.entity.EntityRef;
@@ -23,7 +24,6 @@ import org.terasology.entitySystem.event.ReceiveEvent;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.math.geom.Vector3i;
 import org.terasology.registry.In;
 import org.terasology.registry.Share;
 import org.terasology.world.WorldProvider;
@@ -31,10 +31,6 @@ import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockRegion;
 import org.terasology.world.time.WorldTimeEvent;
 
-/**
- * TODO Type description
- * @author Martin Steiger
- */
 @RegisterSystem(RegisterMode.AUTHORITY)
 @Share(CloudUpdateManager.class)
 public class CloudUpdateManager extends BaseComponentSystem {
