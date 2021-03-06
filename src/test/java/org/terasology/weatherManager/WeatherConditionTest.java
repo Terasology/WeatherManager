@@ -15,9 +15,8 @@
  */
 package org.terasology.weatherManager;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.terasology.weatherManager.systems.MarkovChainWeatherGenerator;
-import org.terasology.world.time.WorldTime;
 
 /**
  * Created by Linus on 5-11-2014.
