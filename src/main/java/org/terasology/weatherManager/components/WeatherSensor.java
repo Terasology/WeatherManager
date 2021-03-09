@@ -15,7 +15,7 @@
  */
 package org.terasology.weatherManager.components;
 
-import org.terasology.entitySystem.Component;
+import org.terasology.engine.entitySystem.Component;
 
 /**
  * Created by Linus on 30-10-2014.

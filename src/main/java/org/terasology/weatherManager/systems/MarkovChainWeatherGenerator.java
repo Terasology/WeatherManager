@@ -16,11 +16,11 @@
 package org.terasology.weatherManager.systems;
 
 import org.joml.Vector2f;
+import org.terasology.engine.utilities.random.FastRandom;
+import org.terasology.engine.utilities.random.Random;
 import org.terasology.markovChains.RawMarkovChain;
 import org.terasology.markovChains.dataStructures.TransitionMatrix;
 import org.terasology.math.TeraMath;
-import org.terasology.utilities.random.FastRandom;
-import org.terasology.utilities.random.Random;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;

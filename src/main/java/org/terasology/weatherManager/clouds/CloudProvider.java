@@ -17,14 +17,14 @@
 package org.terasology.weatherManager.clouds;
 
 import org.joml.Vector2ic;
-import org.terasology.registry.CoreRegistry;
-import org.terasology.utilities.procedural.BrownianNoise3D;
-import org.terasology.utilities.procedural.PerlinNoise;
-import org.terasology.world.generation.Border3D;
-import org.terasology.world.generation.FacetProviderPlugin;
-import org.terasology.world.generation.GeneratingRegion;
-import org.terasology.world.generation.Produces;
-import org.terasology.world.generator.plugin.RegisterPlugin;
+import org.terasology.engine.registry.CoreRegistry;
+import org.terasology.engine.utilities.procedural.BrownianNoise3D;
+import org.terasology.engine.utilities.procedural.PerlinNoise;
+import org.terasology.engine.world.generation.Border3D;
+import org.terasology.engine.world.generation.FacetProviderPlugin;
+import org.terasology.engine.world.generation.GeneratingRegion;
+import org.terasology.engine.world.generation.Produces;
+import org.terasology.engine.world.generator.plugin.RegisterPlugin;
 
 /**
  * A facet provider for a single layer of clouds

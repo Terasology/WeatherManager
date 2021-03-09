@@ -16,7 +16,7 @@
 
 package org.terasology.weatherManager.events;
 
-import org.terasology.entitySystem.event.Event;
+import org.terasology.engine.entitySystem.event.Event;
 
 /**
  * Event which is called when the weather changes to sunny
