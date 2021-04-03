@@ -34,7 +34,7 @@ import org.terasology.engine.particles.ParticlePool;
 import org.terasology.engine.particles.components.ParticleEmitterComponent;
 import org.terasology.engine.particles.components.generators.VelocityRangeGeneratorComponent;
 import org.terasology.engine.registry.In;
-import org.terasology.naming.Name;
+import org.terasology.gestalt.naming.Name;
 import org.terasology.weatherManager.events.StartHailEvent;
 import org.terasology.weatherManager.events.StartRainEvent;
 import org.terasology.weatherManager.events.StartSnowEvent;
