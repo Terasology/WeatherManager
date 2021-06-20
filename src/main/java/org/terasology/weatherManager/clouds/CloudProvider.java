@@ -18,8 +18,8 @@ package org.terasology.weatherManager.clouds;
 
 import org.joml.Vector2ic;
 import org.terasology.engine.registry.CoreRegistry;
-import org.terasology.engine.utilities.procedural.BrownianNoise3D;
-import org.terasology.engine.utilities.procedural.PerlinNoise;
+import org.terasology.engine.utilities.procedural.BrownianNoise;
+import org.terasology.engine.utilities.procedural.SimplexNoise;
 import org.terasology.engine.world.generation.Border3D;
 import org.terasology.engine.world.generation.FacetProviderPlugin;
 import org.terasology.engine.world.generation.GeneratingRegion;
@@ -33,11 +33,11 @@ import org.terasology.engine.world.generator.plugin.RegisterPlugin;
 @Produces(CloudFacet.class)
 public class CloudProvider implements FacetProviderPlugin {
 
-    private BrownianNoise3D noise;
+    private BrownianNoise noise;
 
     @Override
     public void setSeed(long seed) {
-        noise = new BrownianNoise3D(new PerlinNoise(seed), 4);
+        noise = new BrownianNoise(new SimplexNoise(seed), 4);
     }
 
     @Override
