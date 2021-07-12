@@ -9,11 +9,25 @@ import org.terasology.gestalt.entitysystem.component.Component;
  */
 public class WeatherSensor implements Component<WeatherSensor> {
 
+    protected boolean canCarryWeather;
+    protected boolean isStatic;
+
     public WeatherSensor(final boolean canCarryWeather, final boolean isStatic) {
         this.canCarryWeather = canCarryWeather;
         this.isStatic = isStatic;
     }
 
-    public final boolean canCarryWeather;
-    public final boolean isStatic;
+    public boolean getIsCanCarryWeather() {
+        return canCarryWeather;
+    }
+
+    public boolean getIsStatic() {
+        return this.isStatic;
+    }
+
+    @Override
+    public void copy(WeatherSensor other) {
+        this.canCarryWeather = other.canCarryWeather;
+        this.isStatic = other.isStatic;
+    }
 }

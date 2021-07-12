@@ -6,4 +6,8 @@ package org.terasology.weatherManager.components;
 import org.terasology.gestalt.entitysystem.component.Component;
 
 public class WeatherBase implements Component<WeatherBase> {
+    @Override
+    public void copy(WeatherBase other) {
+
+    }
 }
