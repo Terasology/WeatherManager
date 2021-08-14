@@ -7,6 +7,6 @@ import org.terasology.gestalt.entitysystem.component.Component;
 public class WeatherGenerator implements Component<WeatherGenerator> {
 
     @Override
-    public void copy(WeatherGenerator other) {
+    public void copyFrom(WeatherGenerator other) {
     }
 }

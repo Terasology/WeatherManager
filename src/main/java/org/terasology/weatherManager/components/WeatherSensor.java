@@ -26,7 +26,7 @@ public class WeatherSensor implements Component<WeatherSensor> {
     }
 
     @Override
-    public void copy(WeatherSensor other) {
+    public void copyFrom(WeatherSensor other) {
         this.canCarryWeather = other.canCarryWeather;
         this.isStatic = other.isStatic;
     }
