@@ -166,14 +166,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         triggerEvents();
     }
 
-//    private void makeClientsSimulationCarriers() {
-//        Iterable<EntityRef> entities = entityManager.getEntitiesWith(ClientComponent.class);
-//
-//        for(EntityRef entity: entities) {
-//            entity.addComponent(new WeatherSensor(true, false));
-//        }
-//    }
-
     @ReceiveEvent
     public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
         if (event.getActionId().equals("RandomWeather")) {
