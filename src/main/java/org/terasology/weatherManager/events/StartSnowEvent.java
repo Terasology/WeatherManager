@@ -16,7 +16,7 @@
 
 package org.terasology.weatherManager.events;
 
-import org.terasology.engine.entitySystem.event.Event;
+import org.terasology.gestalt.entitysystem.event.Event;
 
 /**
  * Event which is called when the weather changes to snowy
