@@ -13,9 +13,11 @@ import java.util.Map;
  * Can be compared with "==", since only one instance will be created for each combination of values.
  */
 public final class DownfallCondition {
-    public static final DownfallCondition NO_DOWNFALL = get(Severity.NONE, DownfallType.NONE, false);
-
     private static final Map<DownfallValues, DownfallCondition> INSTANCES = new HashMap<>();
+
+    // this needs to be executed after creating INSTANCES, otherwise we'll run into an NPE in get()
+    @SuppressWarnings("checkstyle:DeclarationOrder")
+    public static final DownfallCondition NO_DOWNFALL = get(Severity.NONE, DownfallType.NONE, false);
 
     private final DownfallValues downfallValues;
 
