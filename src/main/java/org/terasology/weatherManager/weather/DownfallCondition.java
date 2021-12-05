@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.terasology.weatherManager.weather;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 import java.util.HashMap;
@@ -31,8 +32,20 @@ public final class DownfallCondition {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        DownfallCondition that = (DownfallCondition) o;
+        return Objects.equal(downfallValues, that.downfallValues);
+    }
+
+    @Override
     public int hashCode() {
-        return downfallValues.hashCode();
+        return Objects.hashCode(downfallValues);
     }
 
     public static DownfallCondition get(final Severity amount, final DownfallType type, final boolean withThunder) {
@@ -64,6 +77,10 @@ public final class DownfallCondition {
         /* cooler Java8 version that is not supported yet
         return INSTANCES.computeIfAbsent(values, (DownfallValues v) -> new DownfallCondition(v) );
         */
+    }
+
+    public DownfallValues getDownfallValues() {
+        return downfallValues;
     }
 
     public enum DownfallType {
@@ -114,9 +131,9 @@ public final class DownfallCondition {
             if (other != null && other instanceof DownfallValues) {
                 DownfallValues otherDownfallValues = (DownfallValues) other;
 
-                return otherDownfallValues.type == this.type &&
-                        otherDownfallValues.amount == this.amount &&
-                        otherDownfallValues.withThunder == this.withThunder;
+                return otherDownfallValues.type == this.type
+                        && otherDownfallValues.amount == this.amount
+                        && otherDownfallValues.withThunder == this.withThunder;
             }
 
             return false;
@@ -128,9 +145,5 @@ public final class DownfallCondition {
                     DownfallType.values().length * amount.ordinal() +
                     DownfallType.values().length * Severity.values().length * (withThunder ? 1 : 0);
         }
-    }
-
-    public DownfallValues getDownfallValues() {
-        return downfallValues;
     }
 }
