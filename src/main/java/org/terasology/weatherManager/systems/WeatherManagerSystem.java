@@ -1,18 +1,5 @@
-/*
- * Copyright 2014 MovingBlocks
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2021 The Terasology Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.weatherManager.systems;
 
@@ -21,7 +8,6 @@ import org.joml.Vector2f;
 import org.slf4j.LoggerFactory;
 import org.terasology.engine.entitySystem.entity.EntityManager;
 import org.terasology.engine.entitySystem.entity.EntityRef;
-import org.terasology.engine.entitySystem.event.ReceiveEvent;
 import org.terasology.engine.entitySystem.systems.BaseComponentSystem;
 import org.terasology.engine.entitySystem.systems.RegisterMode;
 import org.terasology.engine.entitySystem.systems.RegisterSystem;
@@ -33,6 +19,7 @@ import org.terasology.engine.logic.players.event.LocalPlayerInitializedEvent;
 import org.terasology.engine.registry.In;
 import org.terasology.engine.registry.Share;
 import org.terasology.engine.world.time.WorldTime;
+import org.terasology.gestalt.entitysystem.event.ReceiveEvent;
 import org.terasology.weatherManager.components.WeatherBase;
 import org.terasology.weatherManager.events.StartHailEvent;
 import org.terasology.weatherManager.events.StartRainEvent;
@@ -56,10 +43,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static final String EVAPORATE_WATER = "evaporateWater";
     public static final String PLACE_WATER = "placeWater";
 
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
+
     private Vector2f currentWind = new Vector2f();
     private Severity severity;
-
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
 
     private DownfallCondition.DownfallType currentWeather;
 
@@ -76,13 +63,13 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @In
     private WorldTime worldTime;
-    
+
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
 
-        DownfallCondition condition = DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.RAIN, false);
+        DownfallCondition condition = DownfallCondition.get(Severity.MODERATE, DownfallCondition.DownfallType.RAIN, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
@@ -94,7 +81,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
 
-        DownfallCondition condition = DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.SNOW, false);
+        DownfallCondition condition = DownfallCondition.get(Severity.MODERATE, DownfallCondition.DownfallType.SNOW, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
@@ -106,7 +93,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
 
-        DownfallCondition condition = DownfallCondition.get(Severity.MODERATE,  DownfallCondition.DownfallType.HAIL, false);
+        DownfallCondition condition = DownfallCondition.get(Severity.MODERATE, DownfallCondition.DownfallType.HAIL, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
@@ -115,7 +102,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Make it sunny", helpText = "Changes the weather to sunny for some time")
     public String makeSunny(@CommandParam(value = "time") int time) {
-        DownfallCondition condition = DownfallCondition.get(Severity.NONE,  DownfallCondition.DownfallType.NONE, false);
+        DownfallCondition condition = DownfallCondition.get(Severity.NONE, DownfallCondition.DownfallType.NONE, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
@@ -131,7 +118,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Override
     public void postBegin() {
-        float avglength = WorldTime.DAY_LENGTH / 480.0f;// / 48.0f; // worldTime.getTimeRate(); -- not available for modules
+        float avglength = WorldTime.DAY_LENGTH / 480.0f; // / 48.0f; // worldTime.getTimeRate(); -- not available for modules
         weatherConditionProvider = new MarkovChainWeatherGenerator(12354, avglength);
         current = weatherConditionProvider.getNext();
 
@@ -150,6 +137,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     /**
      * For changing weather on command.
+     *
      * @param conditionAndDuration The ConditionAndDuration for the new weather.
      */
     private void changeWeather(ConditionAndDuration conditionAndDuration) {
@@ -200,7 +188,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
                 delayManager.addPeriodicAction(weatherEntity, PLACE_SNOW, 200, 400);
             }
 
-            if (currentWeather.equals(DownfallCondition.DownfallType.NONE)){
+            if (currentWeather.equals(DownfallCondition.DownfallType.NONE)) {
                 delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 150, 300);
                 delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 150, 300);
             }
@@ -215,7 +203,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             weatherEntity.send(new StartSnowEvent());
         }
 
-        if (currentWeather.equals(DownfallCondition.DownfallType.NONE)){
+        if (currentWeather.equals(DownfallCondition.DownfallType.NONE)) {
             weatherEntity.send(new StartSunEvent());
         }
 
@@ -258,9 +246,11 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public DownfallCondition.DownfallType getCurrentWeather() {
         return currentWeather;
     }
+
     public Vector2f getCurrentWind() {
         return currentWind;
     }
+
     public Severity getCurrentSeverity() {
         return severity;
     }
