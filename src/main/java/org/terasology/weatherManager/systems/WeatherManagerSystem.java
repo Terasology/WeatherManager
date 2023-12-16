@@ -4,16 +4,28 @@
 package org.terasology.weatherManager.systems;
 
 import com.google.common.math.DoubleMath;
+import com.google.common.base.Function;
 import org.joml.Vector2f;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
+import java.util.List;
+import java.util.ArrayList;
 import org.slf4j.LoggerFactory;
+import org.terasology.engine.context.Context;
+import org.terasology.engine.network.NetworkSystem;
 import org.terasology.engine.entitySystem.entity.EntityManager;
 import org.terasology.engine.entitySystem.entity.EntityRef;
+import org.terasology.engine.logic.delay.PeriodicActionTriggeredEvent;
 import org.terasology.engine.entitySystem.systems.BaseComponentSystem;
 import org.terasology.engine.entitySystem.systems.RegisterMode;
 import org.terasology.engine.entitySystem.systems.RegisterSystem;
 import org.terasology.engine.logic.console.commandSystem.annotations.Command;
 import org.terasology.engine.logic.console.commandSystem.annotations.CommandParam;
 import org.terasology.engine.logic.delay.DelayManager;
+import org.terasology.engine.network.Client;
+import org.terasology.engine.logic.location.LocationComponent;
 import org.terasology.engine.logic.delay.DelayedActionTriggeredEvent;
 import org.terasology.engine.logic.players.event.LocalPlayerInitializedEvent;
 import org.terasology.engine.registry.In;
@@ -25,6 +37,7 @@ import org.terasology.weatherManager.events.StartHailEvent;
 import org.terasology.weatherManager.events.StartRainEvent;
 import org.terasology.weatherManager.events.StartSnowEvent;
 import org.terasology.weatherManager.events.StartSunEvent;
+import org.terasology.weatherManager.events.TemperatureIncreaseEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;
@@ -34,6 +47,10 @@ import java.math.RoundingMode;
 import java.util.Iterator;
 import java.util.Random;
 
+import org.terasology.climateConditions.ClimateConditionsSystem;
+import org.terasology.climateConditions.ClimateConditionsSystem;
+
+
 @RegisterSystem(RegisterMode.AUTHORITY)
 @Share(WeatherManagerSystem.class)
 public class WeatherManagerSystem extends BaseComponentSystem {
@@ -42,6 +59,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static final String MELT_SNOW = "meltSnow";
     public static final String EVAPORATE_WATER = "evaporateWater";
     public static final String PLACE_WATER = "placeWater";
+    public static final String TEMPERATURE_INCREASE = "temperatureIncrease";
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
 
@@ -51,6 +69,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     private DownfallCondition.DownfallType currentWeather;
 
     private WeatherConditionProvider weatherConditionProvider;
+    private float currentTemperature;
 
     private ConditionAndDuration current;
     private EntityRef weatherEntity;
@@ -63,6 +82,20 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @In
     private WorldTime worldTime;
+
+    @In
+    private ClimateConditionsSystem climateConditionsSystem;
+
+    @In
+    private Context context;
+    private int countTempAug = 0;
+    private NetworkSystem networkSystem;
+
+
+    @Command(shortDescription = "Print Massage", helpText = "Equivalent to a println but in the chat")
+    public String printMessage(@CommandParam(value = "text") String text){
+        return this.countTempAug+"";
+    }
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
@@ -85,14 +118,15 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
-        return "It is now snowing.";
+        this.changeTemperaturePlayers();
+        delayManager.addPeriodicAction(weatherEntity, TEMPERATURE_INCREASE, 10, 100);
+        return "It is now snowing." + this.currentTemperature;
     }
 
     @Command(shortDescription = "Make it hail", helpText = "Changes the weather to hailing for some time")
     public String makeHail(@CommandParam(value = "time") int time) {
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
-
         DownfallCondition condition = DownfallCondition.get(Severity.MODERATE, DownfallCondition.DownfallType.HAIL, false);
         WeatherCondition weatherCondition = new WeatherCondition(Severity.MODERATE, condition, new Vector2f(windX, windY));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
@@ -116,8 +150,39 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         changeWeather(current);
     }
 
+    @ReceiveEvent
+    public void changeTemperatureEvent(PeriodicActionTriggeredEvent event, EntityRef worldEntity) {
+        if (event.getActionId().equals(TEMPERATURE_INCREASE)) {
+            //we create a temperature event to set the temperature of the environment and we set the temperature
+            new TemperatureIncreaseEvent();
+            this.changeTemperaturePlayers();
+        }
+    }
+
+    @ReceiveEvent
+    public void reduceTemperature(StartSnowEvent event, EntityRef worldEntity) {
+//        Function<Float, Float> function = (Float number) -> {
+//            return (float) (number - 0.5 * Math.random());
+//        };
+//        this.climateConditionsSystem.configureTemperature(0, 100, 0, function,
+//                -10, 30);
+    }
+
+    @ReceiveEvent
+    public void increaseTemperature(StartSnowEvent event, EntityRef worldEntity) {
+        float temperature = this.currentTemperature +0.1f;
+        Function<Float, Float> function = (Float number) -> {
+            return (float) (temperature);
+        };
+        this.climateConditionsSystem.configureTemperature(0, 200, 0, function,
+                -10, 30);
+        this.changeTemperaturePlayers();
+
+    }
+
     @Override
     public void postBegin() {
+        networkSystem = context.get(NetworkSystem.class);
         float avglength = WorldTime.DAY_LENGTH / 480.0f; // / 48.0f; // worldTime.getTimeRate(); -- not available for modules
         weatherConditionProvider = new MarkovChainWeatherGenerator(12354, avglength);
         current = weatherConditionProvider.getNext();
@@ -131,7 +196,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             weatherEntity = entityManager.create();
             weatherEntity.addComponent(new WeatherBase());
         }
-
         changeWeather(current);
     }
 
@@ -154,6 +218,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         triggerEvents();
     }
 
+
     @ReceiveEvent
     public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
         if (event.getActionId().equals("RandomWeather")) {
@@ -166,11 +231,13 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
     }
 
+
     /**
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
         if (delayManager != null && weatherEntity != null) {
+
             if (delayManager.hasPeriodicAction(weatherEntity, MELT_SNOW)) {
                 delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
             }
@@ -186,11 +253,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
             if (currentWeather.equals(DownfallCondition.DownfallType.SNOW)) {
                 delayManager.addPeriodicAction(weatherEntity, PLACE_SNOW, 200, 400);
+                this.changeTemperaturePlayers();
             }
 
             if (currentWeather.equals(DownfallCondition.DownfallType.NONE)) {
-                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 150, 300);
-                delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 150, 300);
+                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 10, 10);
+                delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 10, 10);
             }
 
             if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
@@ -255,8 +323,31 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         return severity;
     }
 
+    public void changeTemperaturePlayers() {
+        this.countTempAug=100;
+        List<Vector3fc> playerPos = this.getPlayersPosition();
+        float currentTemp = 0;
+        for(Vector3fc players : playerPos){
+            currentTemp += this.climateConditionsSystem.getTemperature(players.x(), players.y(), players.z());
+        }
+        this.currentTemperature = currentTemp/playerPos.size();
+    }
+
     public float randomWindSpeed() {
         Random rand = new Random();
         return (float) Math.random() / (rand.nextInt(21) - 10);
+    }
+
+    public List<Vector3fc> getPlayersPosition() {
+        final Vector3f position = new Vector3f();
+        final Vector3f playerPos = new Vector3f();
+        List<Vector3fc> listPlayerPos = new ArrayList<Vector3fc>();
+
+        for (Client currentPlayer : networkSystem.getPlayers()) {
+            LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+            playerPos.set(locComp.getWorldPosition(position));
+            listPlayerPos.add(playerPos);
+        }
+        return listPlayerPos;
     }
 }
