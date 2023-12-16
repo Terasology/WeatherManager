@@ -349,7 +349,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
         return listPlayerPos;
     }
-    public void currentWeather(){
+    public void curWeather(){
         Random rand = new Random();
         boolean withThunder = rand.nextInt(2)==0?false:true ;
         Severity severity = withThunder==false?Severity.MODERATE: Severity.HEAVY;
