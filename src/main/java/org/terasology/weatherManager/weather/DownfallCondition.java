@@ -78,27 +78,6 @@ public final class DownfallCondition {
         return INSTANCES.computeIfAbsent(values, (DownfallValues v) -> new DownfallCondition(v) );
         */
     }
-    public static DownfallCondition currentDownfall(float temperature, Severity humidity){
-        Random rand = new Random();
-        boolean withThunder = rand.nextInt(2)==0?false:true ;
-        // if the severity is none, there is no downfall regardless of the temparature. Also, there is no thunder
-        // because it would be an illegal combination as stated in the get method of this class
-        if(humidity.toString().equals("none")){
-            return DownfallCondition.get(humidity,DownfallCondition.DownfallType.NONE,false);
-        }
-        // it is raining with a severity non equal to none if the temperature is greater than 0
-        else if(temperature>0){
-            return DownfallCondition.get(humidity,DownfallCondition.DownfallType.RAIN,withThunder);
-        }
-        // it is hailing with a severity non equal to none if the temperature greater than -2 and less than 0
-        else if(temperature>-2){
-            return DownfallCondition.get(humidity,DownfallCondition.DownfallType.HAIL,withThunder);
-        }
-        // it is snowing if there is no match with the precedent cases
-        else {
-            return DownfallCondition.get(humidity,DownfallCondition.DownfallType.SNOW,withThunder);
-        }
-    }
 
     public DownfallValues getDownfallValues() {
         return downfallValues;

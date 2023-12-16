@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.weatherManager.systems;
-
 import com.google.common.math.DoubleMath;
 import com.google.common.base.Function;
 import org.joml.Vector2f;
@@ -349,5 +348,95 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             listPlayerPos.add(playerPos);
         }
         return listPlayerPos;
+    }
+    public triggerWeather(int time){
+        float currentHumidityDegree = this.climateConditionsSystem.getHumidity(this.getPlayersPosition()) / this.climateConditionsSystem.humidityMaximum ;
+        Random rand = new Random();
+        boolean withThunder = rand.nextInt(2)==0?false:true ;
+        Severity severity = withThunder==false?Severity.MODERATE: Severity.HEAVY;
+        if (delayManager != null && weatherEntity != null) {
+
+            if (delayManager.hasPeriodicAction(weatherEntity, MELT_SNOW)) {
+                delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
+            }
+            if (delayManager.hasPeriodicAction(weatherEntity, EVAPORATE_WATER)) {
+                delayManager.cancelPeriodicAction(weatherEntity, EVAPORATE_WATER);
+            }
+            if (delayManager.hasPeriodicAction(weatherEntity, PLACE_SNOW)) {
+                delayManager.cancelPeriodicAction(weatherEntity, PLACE_SNOW);
+            }
+            if (delayManager.hasPeriodicAction(weatherEntity, PLACE_WATER)) {
+                delayManager.cancelPeriodicAction(weatherEntity, PLACE_WATER);
+            }
+
+            if (currentWeather.equals(DownfallCondition.DownfallType.SNOW)) {
+                delayManager.addPeriodicAction(weatherEntity, PLACE_SNOW, 200, 400);
+                this.changeTemperaturePlayers();
+            }
+
+            if (currentWeather.equals(DownfallCondition.DownfallType.NONE)) {
+                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 10, 10);
+                delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 10, 10);
+            }
+
+            if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
+                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 150, 300);
+                delayManager.addPeriodicAction(weatherEntity, PLACE_WATER, 1000, 10000);
+            }
+        }
+        if(currentHumidityDegree>0.7){
+            if(this.currentTemperature>0){
+                DownfallCondition condition = DownfallCondition.get(severity, DownfallCondition.DownfallType.RAIN, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(severity, condition, new Vector2f(windX, windY));
+                ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+                this.current = conditionAndDuration ;
+                weatherEntity.send(new StartRainEvent());
+            }
+            else if(this.currentTemperature>-10 && this.currentTemperature<=0){
+                DownfallCondition condition = DownfallCondition.get(severity, DownfallCondition.DownfallType.SNOW, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(severity, condition, new Vector2f(windX, windY));
+                ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+                this.current = conditionAndDuration ;
+                weatherEntity.send(new StartSnowEvent());
+            }
+            else{
+                DownfallCondition condition = DownfallCondition.get(severity, DownfallCondition.DownfallType.HAIL, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(severity, condition, new Vector2f(windX, windY));
+                ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+                this.current = conditionAndDuration ;
+                weatherEntity.send(new StartHailEvent());
+            }
+        }
+        if(currentHumidityDegree<=0.7 && currentHumidityDegree>0.5 ){
+            if(this.currentTemperature>0){
+                DownfallCondition condition = DownfallCondition.get(Severity.LIGHT, DownfallCondition.DownfallType.RAIN, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(Severity.LIGHT, condition, new Vector2f(windX, windY));
+                ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+                this.current = conditionAndDuration ;
+                weatherEntity.send(new StartRainEvent());
+            }
+            else if(this.currentTemperature>-10 && this.currentTemperature<=0){
+                DownfallCondition condition = DownfallCondition.get(Severity.LIGHT, DownfallCondition.DownfallType.SNOW, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(Severity.LIGHT, condition, new Vector2f(windX, windY));
+                ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+                this.current = conditionAndDuration ;
+                weatherEntity.send(new StartSnowEvent());
+            }
+            else{
+                DownfallCondition condition = DownfallCondition.get(Severity.LIGHT, DownfallCondition.DownfallType.HAIL, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(Severity.LIGHT, condition, new Vector2f(windX, windY));
+                ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+                this.current = conditionAndDuration ;
+                weatherEntity.send(new StartHailEvent());
+            }
+        }
+        if(currentHumidityDegree<=0.5){
+            DownfallCondition condition = DownfallCondition.get(Severity.NONE, DownfallCondition.DownfallType.NONE, false);
+            WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(windX, windY));
+            ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
+            this.current = conditionAndDuration ;
+            weatherEntity.send(new StartSunEvent());
+        }
+
     }
 }
