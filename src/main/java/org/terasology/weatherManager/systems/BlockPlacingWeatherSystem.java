@@ -175,3 +175,4 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
         return initial + rand.nextInt(SNOW_BLOCK_RANGE * 2) - SNOW_BLOCK_RANGE;
     }
 }
+
