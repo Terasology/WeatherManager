@@ -66,7 +66,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static final String TEMPERATURE_STAGNATE = "temperatureStagnate";
     public static final String DELAYED_TEMPERATURE_CHOICE = "delayTemp";
     public static final float TMAX = 50f;
-    public static final float TMIN = -10;
+    public static final float TMIN = -10f;
+    public static final float TFREEZE = 0f;
+    public static final float TEBULLITION = 20f;
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(WeatherManagerSystem.class);
 
     private Vector2f currentWind = new Vector2f();
