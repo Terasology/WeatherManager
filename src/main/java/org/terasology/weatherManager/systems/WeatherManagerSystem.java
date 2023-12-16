@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.weatherManager.systems;
-
 import com.google.common.math.DoubleMath;
 import com.google.common.base.Function;
 import org.joml.Vector2f;
@@ -325,6 +324,54 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
         return listPlayerPos;
     }
+  
+    public void currentWeather(){
+        Random rand = new Random();
+        boolean withThunder = rand.nextInt(2)==0?false:true ;
+        Severity severity = withThunder==false?Severity.MODERATE: Severity.HEAVY;
+        for(Vector3fc position : this.getPlayersPosition()){
+            float currentHumidityDegree = this.climateConditionsSystem.getHumidity(position) / this.climateConditionsSystem.humidityMaximum ;
+            if(currentHumidityDegree>0.7){
+                if(this.currentTemperature>0){
+                    DownfallCondition condition = DownfallCondition.get(severity, DownfallCondition.DownfallType.RAIN, withThunder);
+                    WeatherCondition weatherCondition = new WeatherCondition(severity, condition, new Vector2f(windX, windY));
+                    this.current.condition = weatherCondition ;
+                }
+                else if(this.currentTemperature>-10 && this.currentTemperature<=0){
+                    DownfallCondition condition = DownfallCondition.get(severity, DownfallCondition.DownfallType.SNOW, withThunder);
+                    WeatherCondition weatherCondition = new WeatherCondition(severity, condition, new Vector2f(windX, windY));
+                    this.current.condition = weatherCondition ;
+
+                }
+                else{
+                    DownfallCondition condition = DownfallCondition.get(severity, DownfallCondition.DownfallType.HAIL, withThunder);
+                    WeatherCondition weatherCondition = new WeatherCondition(severity, condition, new Vector2f(windX, windY));
+                    this.current.condition = weatherCondition ;
+                }
+            }
+            if(currentHumidityDegree<=0.7 && currentHumidityDegree>0.5 ){
+                if(this.currentTemperature>0){
+                    DownfallCondition condition = DownfallCondition.get(Severity.LIGHT, DownfallCondition.DownfallType.RAIN, false);
+                    WeatherCondition weatherCondition = new WeatherCondition(Severity.LIGHT, condition, new Vector2f(windX, windY));
+                    this.current.condition = weatherCondition ;
+                }
+                else if(this.currentTemperature>-10 && this.currentTemperature<=0){
+                    DownfallCondition condition = DownfallCondition.get(Severity.LIGHT, DownfallCondition.DownfallType.SNOW, false);
+                    WeatherCondition weatherCondition = new WeatherCondition(Severity.LIGHT, condition, new Vector2f(windX, windY));
+                    this.current.condition = weatherCondition ;
+                }
+                else{
+                    DownfallCondition condition = DownfallCondition.get(Severity.LIGHT, DownfallCondition.DownfallType.HAIL, false);
+                    WeatherCondition weatherCondition = new WeatherCondition(Severity.LIGHT, condition, new Vector2f(windX, windY));
+                    this.current.condition = weatherCondition ;
+                }
+            }
+            if(currentHumidityDegree<=0.5){
+                DownfallCondition condition = DownfallCondition.get(Severity.NONE, DownfallCondition.DownfallType.NONE, false);
+                WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(windX, windY));
+                this.current.condition = weatherCondition ;
+            }
+        }
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
     public String printMessage(@CommandParam(value = "text") String text){
@@ -442,5 +489,5 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             //We add another delayed action to do this action again, over and over
             delayManager.addDelayedAction(weatherEntity,DELAYED_TEMPERATURE_CHOICE, 100000);
         }
-    }
+    
 }
