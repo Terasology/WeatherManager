@@ -266,8 +266,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
             weatherEntity.send(new StartRainEvent());
+            
             for(Vector3fc position : this.getPlayersPosition()){
             increaseHumidity(position);
+            
         }
         }
 
@@ -548,8 +550,20 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
 
     }
-    
-    public void increaseHumidity(Vector3fc position) {
+
+
+     
+    @Command(shortDescription = "changes the weather", helpText = "changes the weather depending on the temperature and the humidity")
+    public String chWeather(){
+        for(Vector3fc position : this.getPlayersPosition()){
+            curWeather(position);
+        }
+        triggerEvents();
+        return "WEATHER CHANGED: " + current.condition + "(" + current.duration + ")" ;
+    }
+
+
+public void increaseHumidity(Vector3fc position /* HumidityIncreaseEvent event, EntityRef worldEntity */) {
     currentHumidity = this.climateConditionsSystem.getHumidity(position) / 100 ;
     float humidity = this.currentHumidity;
     float humidityMin = 0f;
@@ -567,16 +581,47 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     this.climateConditionsSystem.configureHumidity(200, 200, 0, function, humidityMin, humidityMax);
 }
+/* Dealing with Humidity periodically 
+ @ReceiveEvent
+    public void chooseHumidity(DelayedActionTriggeredEvent event, EntityRef weatherEntity) {
+        if (event.getActionId().equals(DELAYED_HUMIDITY_CHOICE)) {
+            // We cancel all periodic action
+            if (delayManager.hasPeriodicAction(weatherEntity, HUMIDITY_INCREASE)) {
+                delayManager.cancelPeriodicAction(weatherEntity, HUMIDITY_INCREASE);
+            }
 
-     
-    @Command(shortDescription = "changes the weather", helpText = "changes the weather depending on the temperature and the humidity")
-    public String chWeather(){
-        for(Vector3fc position : this.getPlayersPosition()){
-            curWeather(position);
+            this.countHumAug++;
+            // Add a new periodic action to increase humidity
+            delayManager.addPeriodicAction(weatherEntity, HUMIDITY_INCREASE, 0, 1000);
+
+            // Add another delayed action to trigger the humidity choice periodically
+            delayManager.addDelayedAction(weatherEntity, DELAYED_HUMIDITY_CHOICE, 100000);
         }
-        triggerEvents();
-        return "WEATHER CHANGED: " + current.condition + "(" + current.duration + ")" ;
+
     }
+
+@ReceiveEvent
+    public void chooseHumidityVariable(PeriodicActionTriggeredEvent event, EntityRef weatherEntity) {
+        switch (event.getActionId()) {
+            case HUMIDITY_INCREASE:
+                weatherEntity.send(new HumidityIncreaseEvent());
+                this.triggerEvents();
+                break;
+            // Add other humidity-related cases if needed in the future
+        }
+    }
+
+public void changeHumidityPlayers() {
+        List<Vector3fc> playerPos = this.getPlayersPosition();
+        float currentHumid = 0;
+
+        for (Vector3fc players : playerPos) {
+            currentHumid += this.climateConditionsSystem.getHumidity(players.x(), players.y(), players.z());
+
+        }
+        this.currentHumidity = currentHumid / playerPos.size();
+    }
+*/
 
 }
 
