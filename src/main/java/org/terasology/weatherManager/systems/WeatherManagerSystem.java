@@ -352,6 +352,11 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         Random rand = new Random();
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
+        boolean[] tab = {true, false};
+        boolean withThunder = tab[(int)(Math.random()*2)];
+                if(this.severity == Severity.NONE) {
+                    withThunder = false;
+                }
         float currentHumidityDegree = this.currentHumidity / 100 ;
         if (currentHumidityDegree > 0.7) {
 
@@ -441,8 +446,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
     public String setTemperature(@CommandParam(value = "text") int temp) {
         this.currentTemperature = (float) temp;
-        return "this.currentTemperature = " + this.currentTemperature + "\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
-                + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity, "Weather");
+        return "this.currentTemperature = " + this.currentTemperature + "\n" +"this.currentHumidity" + this.currentHumidity;
     }
 
 
@@ -585,7 +589,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         float humidityMax = 100f;
 
         // Add a small random value to the current humidity
-        float randNbr = (float) (Math.random() * 0.1);
+        float randNbr = (float) (Math.random() * 0.5);
         humidity = (humidity - humidityMin - randNbr)/(humidityMax - humidityMin);
 
 
@@ -617,7 +621,7 @@ public void increaseHumidity(HumidityIncreaseEvent event, EntityRef weatherEntit
     float humidityMax = 100f;
 
     // Add a small random value to the current humidity
-    float randNbr = (float) (Math.random() * 0.1);
+    float randNbr = (float) (Math.random() * 0.5);
     humidity = (humidity - humidityMin + randNbr)/(humidityMax - humidityMin);
 
     float value = humidity;
