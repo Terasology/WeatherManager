@@ -263,6 +263,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
             weatherEntity.send(new StartRainEvent());
+            for(Vector3fc position : this.getPlayersPosition()){
+            increaseHumidity(position);
+        }
         }
 
         if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
@@ -542,20 +545,27 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
 
     }
-    /**public void increaseHumidity() {
-        float humidity = this.currentHumidity;
-        float humidityMin = 0f;
-        float humidityMax = 100f;
-        float randNbr = (float) (Math.random() * 0.01);
-        float value = (humidity - humidityMin + randNbr) / (humidityMax - humidityMin);
-        Function<Float, Float> function = (Float number) -> {
-            return (float) (value);
-        };
+    
+    public void increaseHumidity(Vector3fc position) {
+    currentHumidity = this.climateConditionsSystem.getHumidity(position) / 100 ;
+    float humidity = this.currentHumidity;
+    float humidityMin = 0f;
+    float humidityMax = 100f;
+    
+    // Add a small random value to the current humidity
+    float randNbr = (float) (Math.random() * 0.01);
+    humidity += randNbr;
 
-        this.climateConditionsSystem.configureHumidity(200, 200, 0, function,
-                humidityMin, humidityMax);
-    }
-     */
+    // Ensure the humidity stays within the valid range
+    humidity = Math.min(Math.max(humidity, humidityMin), humidityMax);
+
+    // Configure the climate conditions system with the updated humidity value
+    Function<Float, Float> function = (Float number) -> humidity;
+
+    this.climateConditionsSystem.configureHumidity(200, 200, 0, function, humidityMin, humidityMax);
+}
+
+     
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
     public String chWeather(){
         for(Vector3fc position : this.getPlayersPosition()){
