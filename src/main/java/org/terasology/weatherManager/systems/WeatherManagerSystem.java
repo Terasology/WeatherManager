@@ -206,13 +206,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
     }
 
+
     /**
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
-        for(Vector3fc position : this.getPlayersPosition()){
-            curWeather(position);
-        }
+        curWeather();
         if(!delayManager.hasDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE)) {
             delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100000);
         }
@@ -349,14 +348,13 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         return listPlayerPos;
     }
 
-    public void curWeather(Vector3fc position) {
+    public void curWeather() {
         Random rand = new Random();
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
-        boolean withThunder = rand.nextInt(2) == 0 ? false : true;
-        this.severity = withThunder == false ? Severity.MODERATE : Severity.HEAVY;
         float currentHumidityDegree = this.currentHumidity / 100 ;
         if (currentHumidityDegree > 0.7) {
+
             if (this.currentTemperature > 0  && !currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
                 //we changed the weather
                 this.changeWeatherTrue = true;
@@ -365,9 +363,11 @@ public class WeatherManagerSystem extends BaseComponentSystem {
                 this.currentWeather = DownfallCondition.DownfallType.RAIN ;
                 float time = this.current.duration ;
                 this.current = new ConditionAndDuration(weatherCondition,time);
+
             } else if (this.currentTemperature > -5 && this.currentTemperature <= 0 && !currentWeather.equals(DownfallCondition.DownfallType.SNOW)) {
                 this.changeWeatherTrue = true;
                 DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.SNOW, withThunder);
+
                 WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
                 this.currentWeather = DownfallCondition.DownfallType.SNOW ;
                 float time = this.current.duration ;
@@ -414,9 +414,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         if (currentHumidityDegree <= 0.5 && !currentWeather.equals(DownfallCondition.DownfallType.NONE)) {
             this.changeWeatherTrue = true;
             this.severity = Severity.NONE ;
-            if(withThunder == true){
-                withThunder = false;
-            }
             DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.NONE, false);
             WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
             this.currentWeather = DownfallCondition.DownfallType.NONE ;
@@ -440,6 +437,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             this.currentHumidity = 100f;
         }
         return "this.currentHumidity = " + this.currentHumidity ;
+    }
+    @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
+    public String setTemperature(@CommandParam(value = "text") int temp) {
+        this.currentTemperature = (float) temp;
+        return "this.currentTemperature = " + this.currentTemperature + "\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
+                + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity, "Weather");
     }
 
 
@@ -570,9 +573,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "changes the weather", helpText = "changes the weather depending on the temperature and the humidity")
     public String chWeather(){
-        for(Vector3fc position : this.getPlayersPosition()){
-            curWeather(position);
-        }
         triggerEvents();
         return "WEATHER CHANGED: " + current.condition + "(" + current.duration + ")" ;
     }
