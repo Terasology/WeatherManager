@@ -44,6 +44,10 @@ import org.terasology.weatherManager.weather.ConditionAndDuration;
 import org.terasology.weatherManager.weather.DownfallCondition;
 import org.terasology.weatherManager.weather.Severity;
 import org.terasology.weatherManager.weather.WeatherCondition;
+import org.terasology.engine.network.Client;
+import org.terasology.engine.logic.location.LocationComponent;
+
+
 
 import java.math.RoundingMode;
 import java.util.Iterator;
@@ -97,6 +101,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     private double countTempAug = 0;
     private NetworkSystem networkSystem;
 
+    @In
+    private WorldProvider worldProvider;
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
@@ -139,7 +145,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
         ConditionAndDuration conditionAndDuration = new ConditionAndDuration(weatherCondition, time);
         changeWeather(conditionAndDuration);
-        delayManager.addDelayedAction(weatherEntity,DELAYED_TEMPERATURE_CHOICE, 100);
+        delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100);
         return "It is now sunny.";
     }
 
@@ -302,15 +308,16 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         List<Vector3fc> playerPos = this.getPlayersPosition();
         float currentTemp = 0;
 
-        for(Vector3fc players : playerPos){
+        for (Vector3fc players : playerPos) {
             currentTemp += this.climateConditionsSystem.getTemperature(players.x(), players.y(), players.z());
 
         }
-        this.currentTemperature = currentTemp/playerPos.size();
+        this.currentTemperature = currentTemp / playerPos.size();
     }
 
     /**
      * Get a list of the position of all the players
+     *
      * @return List<Vector3fc> listPlayers
      */
     public List<Vector3fc> getPlayersPosition() {
@@ -327,24 +334,25 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     }
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
-    public String printMessage(@CommandParam(value = "text") String text){
-        return "this.currentTemperature = " + this.currentTemperature+"\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
-                + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity,"Weather");
+    public String printMessage(@CommandParam(value = "text") String text) {
+        return "this.currentTemperature = " + this.currentTemperature + "\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
+                + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity, "Weather");
     }
 
 
     /**
      * Don't change the current Temperature
+     *
      * @param event
      * @param worldEntity
      */
     @ReceiveEvent
-    public void stagnateTemperature(TemperatureStagnateEvent event,  EntityRef worldEntity){
+    public void stagnateTemperature(TemperatureStagnateEvent event, EntityRef worldEntity) {
         float temperature = this.currentTemperature;
         //T = (TMAX - TMIN)value + TMIN => value = (T - TMIN)/(TMAX -TMIN)
-        float value = (temperature -TMIN)/(TMAX - TMIN);
+        float value = (temperature - TMIN) / (TMAX - TMIN);
         Function<Float, Float> function = (Float number) -> {
-            return (float) (value) ;
+            return (float) (value);
         };
         //I fixed the seaLevel = maxLevel to be sure that the value given if temperatureBase ==> The variation
         //Of temperature can be negligee
@@ -355,6 +363,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     /**
      * Decrease the current Temperature by a number between 0 and 0.01
+     *
      * @param event
      * @param worldEntity
      */
@@ -362,10 +371,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public void reduceTemperature(TemperatureDecreaseEvent event, EntityRef worldEntity) {
         float temperature = this.currentTemperature;
         //T = (TMAX - TMIN)value + TMIN => value = (T - TMIN)/(TMAX -TMIN)
-        float randNbr = (float)(Math.random()*0.01);
-        float value = (temperature -TMIN - randNbr)/(TMAX - TMIN);
+        float randNbr = (float) (Math.random() * 0.01);
+        float value = (temperature - TMIN - randNbr) / (TMAX - TMIN);
         Function<Float, Float> function = (Float number) -> {
-            return (float) (value) ;
+            return (float) (value);
         };
         //I fixed the seaLevel = maxLevel to be sure that the value given if temperatureBase ==> The variation
         //Of temperature due the height can be negligee
@@ -376,6 +385,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     /**
      * Increase the current Temperature by a number between 0 and 0.01
+     *
      * @param event
      * @param worldEntity
      */
@@ -383,10 +393,10 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public void increaseTemperature(TemperatureIncreaseEvent event, EntityRef worldEntity) {
         float temperature = this.currentTemperature;
         //T = (TMAX - TMIN)value + TMIN => value = (T - TMIN)/(TMAX -TMIN)
-        float randNbr = (float)(Math.random()*0.01);
-        float value = (temperature -TMIN + randNbr)/(TMAX - TMIN);
+        float randNbr = (float) (Math.random() * 0.01);
+        float value = (temperature - TMIN + randNbr) / (TMAX - TMIN);
         Function<Float, Float> function = (Float number) -> {
-            return (float) (value) ;
+            return (float) (value);
         };
         //I fixed the seaLevel = maxLevel to be sure that the value given if temperatureBase ==> The variation
         //Of temperature can be negligee
@@ -398,12 +408,13 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     /**
      * This function create a Temperature Event each period.
+     *
      * @param event
      * @param weatherEntity
      */
     @ReceiveEvent
-    public void chooseTemperatureVariable(PeriodicActionTriggeredEvent event , EntityRef weatherEntity){
-        switch(event.getActionId()){
+    public void chooseTemperatureVariable(PeriodicActionTriggeredEvent event, EntityRef weatherEntity) {
+        switch (event.getActionId()) {
             case TEMPERATURE_INCREASE:
                 weatherEntity.send(new TemperatureIncreaseEvent());
                 break;
@@ -419,28 +430,83 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     /**
      * This class will create a periodicAction which will either increase, decrease the temperature or
      * make it stagnate
+     *
      * @param event
      * @param weatherEntity
      */
     @ReceiveEvent
     public void chooseTemperature(DelayedActionTriggeredEvent event, EntityRef weatherEntity) {
-        if(event.getActionId().equals(DELAYED_TEMPERATURE_CHOICE)){
+        if (event.getActionId().equals(DELAYED_TEMPERATURE_CHOICE)) {
             //We cancel all periodic action
-            if(delayManager.hasPeriodicAction(weatherEntity,TEMPERATURE_INCREASE)){
-                delayManager.cancelPeriodicAction(weatherEntity,TEMPERATURE_INCREASE);
+            if (delayManager.hasPeriodicAction(weatherEntity, TEMPERATURE_INCREASE)) {
+                delayManager.cancelPeriodicAction(weatherEntity, TEMPERATURE_INCREASE);
             }
-            if(delayManager.hasPeriodicAction(weatherEntity,TEMPERATURE_DECREASE)){
-                delayManager.cancelPeriodicAction(weatherEntity,TEMPERATURE_DECREASE);
+            if (delayManager.hasPeriodicAction(weatherEntity, TEMPERATURE_DECREASE)) {
+                delayManager.cancelPeriodicAction(weatherEntity, TEMPERATURE_DECREASE);
             }
-            if(delayManager.hasPeriodicAction(weatherEntity,TEMPERATURE_STAGNATE)){
-                delayManager.cancelPeriodicAction(weatherEntity,TEMPERATURE_STAGNATE);
+            if (delayManager.hasPeriodicAction(weatherEntity, TEMPERATURE_STAGNATE)) {
+                delayManager.cancelPeriodicAction(weatherEntity, TEMPERATURE_STAGNATE);
             }
             this.countTempAug++;
-            String[] tempChoices = {TEMPERATURE_STAGNATE,TEMPERATURE_INCREASE,TEMPERATURE_DECREASE};
-            int indexChoice = (int)(Math.random()*3);
+            String[] tempChoices = {TEMPERATURE_STAGNATE, TEMPERATURE_INCREASE, TEMPERATURE_DECREASE};
+            int indexChoice = (int) (Math.random() * 3);
             delayManager.addPeriodicAction(weatherEntity, tempChoices[indexChoice], 0, 100);
             //We add another delayed action to do this action again, over and over
-            delayManager.addDelayedAction(weatherEntity,DELAYED_TEMPERATURE_CHOICE, 100000);
+            delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100000);
+        }
+    }
+
+    /**
+     * Having the snow melt when the temperature reaches 0 degree
+     */
+    public void startMelting(EntityRef weatherEntity) {
+        if (this.currentTemperature >= 0.0) {
+            delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
+            delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 100, 100);
+        }
+        for (Client currentPlayer : networkSystem.getPlayers()) {
+            Vector3i playerPos = new Vector3i();
+            LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+            playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
+            meltSnow(playerPos);
+        }
+    }
+
+    private Vector3i findSpot(Block toCheck, int x, int z, int initialY) {
+        int currentY = initialY + SNOW_BLOCK_RANGE;
+        int iter = 0;
+        while (iter < SNOW_BLOCK_RANGE * 2 && worldProvider.getBlock(x, currentY, z).equals(air)) {
+            iter++;
+            currentY--;
+        }
+        while (iter < SNOW_BLOCK_RANGE * 2 && !worldProvider.getBlock(x, currentY, z).equals(air)) {
+            iter++;
+            currentY++;
+        }
+        if (iter >= SNOW_BLOCK_RANGE * 2) {
+            return null;
+        }
+
+        if (worldProvider.getSunlight(x, currentY, z) != Chunks.MAX_SUNLIGHT) {
+            // The block isn't actually exposed to the weather.
+            return null;
+        }
+        Block ground = worldProvider.getBlock(x, currentY - 1, z);
+        if (ground.equals(toCheck)) {
+            return new Vector3i(x, currentY - 1, z);
+        } else if (toCheck.equals(air) && !ground.isPenetrable() && ground.isAttachmentAllowed()) {
+            return new Vector3i(x, currentY, z);
+        } else {
+            return null;
+        }
+    }
+    private void meltSnow(Vector3ic playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x());
+        int z = getValueToPlaceBlock(playerPos.z());
+        Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y());
+        if (spotToPlace != null) {
+            worldProvider.setBlock(spotToPlace, water);
         }
     }
 }
+
