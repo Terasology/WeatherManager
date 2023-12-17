@@ -569,7 +569,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 }
 
      
-    @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
+    @Command(shortDescription = "changes the weather", helpText = "changes the weather depending on the temperature and the humidity")
     public String chWeather(){
         for(Vector3fc position : this.getPlayersPosition()){
             curWeather(position);
