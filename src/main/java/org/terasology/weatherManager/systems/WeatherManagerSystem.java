@@ -214,6 +214,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
+        for(Vector3fc position : this.getPlayersPosition()){
+            curWeather(position);
+        }
         if(!delayManager.hasDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE)) {
             delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100000);
         }
