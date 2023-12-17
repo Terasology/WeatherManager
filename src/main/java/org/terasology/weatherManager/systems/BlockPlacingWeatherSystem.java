@@ -28,6 +28,7 @@ import static org.terasology.weatherManager.systems.WeatherManagerSystem.EVAPORA
 import static org.terasology.weatherManager.systems.WeatherManagerSystem.MELT_SNOW;
 import static org.terasology.weatherManager.systems.WeatherManagerSystem.PLACE_SNOW;
 import static org.terasology.weatherManager.systems.WeatherManagerSystem.PLACE_WATER;
+import static org.terasology.weatherManager.systems.WeatherManagerSystem.FREEZE_WATER;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class BlockPlacingWeatherSystem extends BaseComponentSystem {
@@ -96,6 +97,13 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
                     evaporateWater(playerPos);
                 }
                 break;
+            case FREEZE_WATER:
+                for (Client currentPlayer : networkSystem.getPlayers()) {
+                    LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
+                    playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
+                    freezeWater(playerPos);
+                }
+                break;
         }
     }
 
@@ -139,6 +147,15 @@ public class BlockPlacingWeatherSystem extends BaseComponentSystem {
         int x = getValueToPlaceBlock(playerPos.x());
         int z = getValueToPlaceBlock(playerPos.z());
         Vector3i spotToPlace = findSpot(air, x, z, playerPos.y());
+        if (spotToPlace != null) {
+            worldProvider.setBlock(spotToPlace, snow);
+        }
+    }
+
+    private void freezeWater(Vector3ic playerPos) {
+        int x = getValueToPlaceBlock(playerPos.x());
+        int z = getValueToPlaceBlock(playerPos.z());
+        Vector3i spotToPlace = findSpot(water, x, z, playerPos.y());
         if (spotToPlace != null) {
             worldProvider.setBlock(spotToPlace, snow);
         }

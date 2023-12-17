@@ -62,6 +62,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     public static final String PLACE_SNOW = "placeSnow";
     public static final String MELT_SNOW = "meltSnow";
+    public static final String FREEZE_WATER = "freezeWater";
     public static final String EVAPORATE_WATER = "evaporateWater";
     public static final String PLACE_WATER = "placeWater";
     public static final String TEMPERATURE_INCREASE = "temperatureIncrease";
@@ -106,8 +107,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     private double countTempAug = 0;
     private NetworkSystem networkSystem;
 
-    @In
-    private WorldProvider worldProvider;
 
     @Command(shortDescription = "Make it rain", helpText = "Changes the weather to raining for some time")
     public String makeRain(@CommandParam(value = "time") int time) {
@@ -216,6 +215,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
+        if(!delayManager.hasDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE)) {
+            delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100000);
+        }
         if (delayManager != null && weatherEntity != null) {
             if (delayManager.hasPeriodicAction(weatherEntity, MELT_SNOW)) {
                 delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
@@ -229,21 +231,27 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             if (delayManager.hasPeriodicAction(weatherEntity, PLACE_WATER)) {
                 delayManager.cancelPeriodicAction(weatherEntity, PLACE_WATER);
             }
+            if (delayManager.hasPeriodicAction(weatherEntity, FREEZE_WATER)) {
+                delayManager.cancelPeriodicAction(weatherEntity, FREEZE_WATER);
+            }
 
             if (currentWeather.equals(DownfallCondition.DownfallType.SNOW)) {
                 delayManager.addPeriodicAction(weatherEntity, PLACE_SNOW, 200, 400);
             }
-
-            if (currentWeather.equals(DownfallCondition.DownfallType.NONE)) {
+            if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
+                delayManager.addPeriodicAction(weatherEntity, PLACE_WATER, 1000, 1000);
+            }
+            if (this.currentTemperature > 0) {
                 delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 100, 100);
+            }
+            if (this.currentTemperature > 20) {
                 delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 100, 100);
             }
+            if (this.currentTemperature < 0) {
+                delayManager.addPeriodicAction(weatherEntity, FREEZE_WATER, 10, 100);
 
-            if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
-                delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 150, 300);
-                delayManager.addPeriodicAction(weatherEntity, PLACE_WATER, 1000, 10000);
-                increaseHumidity();
             }
+
         }
 
         if (currentWeather.equals(DownfallCondition.DownfallType.SNOW)) {
@@ -401,6 +409,13 @@ public class WeatherManagerSystem extends BaseComponentSystem {
                 + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity, "Weather");
     }
 
+    @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
+    public String setTemperature(@CommandParam(value = "text") int temp) {
+        this.currentTemperature = temp;
+        return "this.currentTemperature = " + this.currentTemperature + "\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
+                + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity, "Weather");
+    }
+
 
     /**
      * Don't change the current Temperature
@@ -479,20 +494,22 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         switch (event.getActionId()) {
             case TEMPERATURE_INCREASE:
                 weatherEntity.send(new TemperatureIncreaseEvent());
+                this.triggerEvents();
                 break;
             case TEMPERATURE_DECREASE:
                 weatherEntity.send(new TemperatureDecreaseEvent());
+                this.triggerEvents();
                 break;
             case TEMPERATURE_STAGNATE:
                 weatherEntity.send(new TemperatureStagnateEvent());
+                this.triggerEvents();
                 break;
         }
     }
 
     /**
-     * This class will create a periodicAction which will either increase, decrease the temperature or make it stagnate
-     * This class will create a periodicAction which will either increase, decrease the temperature or
-     * make it stagnate
+     * This class will create a periodicAction which will either increase, decrease the temperature or make it stagnate This class will
+     * create a periodicAction which will either increase, decrease the temperature or make it stagnate
      *
      * @param event
      * @param weatherEntity
@@ -513,67 +530,12 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             this.countTempAug++;
             String[] tempChoices = {TEMPERATURE_STAGNATE, TEMPERATURE_INCREASE, TEMPERATURE_DECREASE};
             int indexChoice = (int) (Math.random() * 3);
-            delayManager.addPeriodicAction(weatherEntity, tempChoices[indexChoice], 0, 100);
+            delayManager.addPeriodicAction(weatherEntity, tempChoices[indexChoice], 0, 1000);
             //We add another delayed action to do this action again, over and over
             delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100000);
         }
 
 
-      
-
-    }
-
-    /**
-     * Having the snow melt when the temperature reaches 0 degree
-     */
-    public void startMelting(EntityRef weatherEntity) {
-        if (this.currentTemperature >= 0.0) {
-            delayManager.cancelPeriodicAction(weatherEntity, MELT_SNOW);
-            delayManager.addPeriodicAction(weatherEntity, MELT_SNOW, 100, 100);
-        }
-        for (Client currentPlayer : networkSystem.getPlayers()) {
-            Vector3i playerPos = new Vector3i();
-            LocationComponent locComp = currentPlayer.getEntity().getComponent(LocationComponent.class);
-            playerPos.set(locComp.getWorldPosition(position), RoundingMode.FLOOR);
-            meltSnow(playerPos);
-        }
-    }
-
-    private Vector3i findSpot(Block toCheck, int x, int z, int initialY) {
-        int currentY = initialY + SNOW_BLOCK_RANGE;
-        int iter = 0;
-        while (iter < SNOW_BLOCK_RANGE * 2 && worldProvider.getBlock(x, currentY, z).equals(air)) {
-            iter++;
-            currentY--;
-        }
-        while (iter < SNOW_BLOCK_RANGE * 2 && !worldProvider.getBlock(x, currentY, z).equals(air)) {
-            iter++;
-            currentY++;
-        }
-        if (iter >= SNOW_BLOCK_RANGE * 2) {
-            return null;
-        }
-
-        if (worldProvider.getSunlight(x, currentY, z) != Chunks.MAX_SUNLIGHT) {
-            // The block isn't actually exposed to the weather.
-            return null;
-        }
-        Block ground = worldProvider.getBlock(x, currentY - 1, z);
-        if (ground.equals(toCheck)) {
-            return new Vector3i(x, currentY - 1, z);
-        } else if (toCheck.equals(air) && !ground.isPenetrable() && ground.isAttachmentAllowed()) {
-            return new Vector3i(x, currentY, z);
-        } else {
-            return null;
-        }
-    }
-    private void meltSnow(Vector3ic playerPos) {
-        int x = getValueToPlaceBlock(playerPos.x());
-        int z = getValueToPlaceBlock(playerPos.z());
-        Vector3i spotToPlace = findSpot(snow, x, z, playerPos.y());
-        if (spotToPlace != null) {
-            worldProvider.setBlock(spotToPlace, water);
-        }
     }
     public void increaseHumidity() {
         float humidity = this.currentHumidity;
@@ -589,4 +551,5 @@ public class WeatherManagerSystem extends BaseComponentSystem {
                 humidityMin, humidityMax);
     }
 }
+
 
