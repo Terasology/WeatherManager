@@ -104,7 +104,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @In
     private Context context;
-    private double countTempAug = 0;
     private NetworkSystem networkSystem;
     private boolean changeWeatherTrue = false;
 
@@ -429,8 +428,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
     public String printMessage(@CommandParam(value = "text") String text) {
-        return "this.currentTemperature = " + this.currentTemperature +"\n" + "this.currentHumidity = " + this.currentHumidity
-                +"\n" + "this.countAug = " + this.countTempAug;
+        return "this.currentTemperature = " + this.currentTemperature +"\n" + "this.currentHumidity = " + this.currentHumidity;
     }
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
