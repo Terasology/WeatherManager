@@ -202,9 +202,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
         //Each time a delayedActionTriggeredEvent is trigger, we change the way the temperature change
         if (event.getActionId().equals("RandomWeather")) {
-            for(Vector3fc position : this.getPlayersPosition()){
-                curWeather(position);
-            }
             triggerEvents();
             logger.debug("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
         }
