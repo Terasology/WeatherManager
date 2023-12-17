@@ -37,6 +37,7 @@ import org.terasology.weatherManager.events.StartRainEvent;
 import org.terasology.weatherManager.events.StartSnowEvent;
 import org.terasology.weatherManager.events.StartSunEvent;
 import org.terasology.weatherManager.events.TemperatureIncreaseEvent;
+import org.terasology.weatherManager.events.HumidityIncreaseEvent;
 import org.terasology.weatherManager.events.TemperatureDecreaseEvent;
 import org.terasology.weatherManager.events.TemperatureStagnateEvent;
 import org.terasology.weatherManager.weather.ConditionAndDuration;
@@ -69,7 +70,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static final String TEMPERATURE_DECREASE = "temperatureDecrease";
     public static final String TEMPERATURE_STAGNATE = "temperatureStagnate";
     public static final String DELAYED_TEMPERATURE_CHOICE = "delayTemp";
-
+    public static final String DELAYED_HUMIDITY_CHOICE = "delayHum";
     public static final String HUMIDITY_INCREASE = "HumidityIncrease";
 
     public static final float TMAX = 50f;
@@ -212,6 +213,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         float windY = randomWindSpeed();
         boolean withThunder = rand.nextInt(2) == 0 ? false : true;
         this.severity = withThunder == false ? Severity.MODERATE : Severity.HEAVY;
+        if(this.severity ==Severity.NONE){
+            withThunder =false;
+        }
         for (Vector3fc position : this.getPlayersPosition()) {
             float currentHumidityDegree = this.climateConditionsSystem.getHumidity(position) / 100 ;
             if (currentHumidityDegree > 0.7) {
@@ -302,12 +306,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
                 delayManager.addPeriodicAction(weatherEntity, EVAPORATE_WATER, 100, 400);
             }
             if (this.currentTemperature < 0) {
-<<<<<<< HEAD
                 delayManager.addPeriodicAction(weatherEntity, FREEZE_WATER, 100, 400);
-=======
-                delayManager.addPeriodicAction(weatherEntity, FREEZE_WATER, 10, 100);
-
->>>>>>> 94540f62a1f4d6cc7b263e55ec422f78a2b3a207
             }
 
         }
@@ -322,11 +321,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
         if (currentWeather.equals(DownfallCondition.DownfallType.RAIN)) {
             weatherEntity.send(new StartRainEvent());
-            
-            for(Vector3fc position : this.getPlayersPosition()){
-            increaseHumidity(position);
-            
-        }
+
         }
 
         if (currentWeather.equals(DownfallCondition.DownfallType.HAIL)) {
@@ -410,15 +405,13 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         return listPlayerPos;
     }
 
-<<<<<<< HEAD
-=======
     public void curWeather(Vector3fc position) {
         Random rand = new Random();
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
         boolean withThunder = rand.nextInt(2) == 0 ? false : true;
         this.severity = withThunder == false ? Severity.MODERATE : Severity.HEAVY;
-        float currentHumidityDegree = this.climateConditionsSystem.getHumidity(position) / 100 ;
+        float currentHumidityDegree = this.currentHumidity / 100 ;
         if (currentHumidityDegree > 0.7) {
             if (this.currentTemperature > 0) {
                 DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.RAIN, withThunder);
@@ -465,6 +458,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
         if (currentHumidityDegree <= 0.5) {
             this.severity = Severity.NONE ;
+            if(withThunder == true){
+                withThunder = false;
+            }
             DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.NONE, false);
             WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
             this.currentWeather = DownfallCondition.DownfallType.NONE ;
@@ -473,7 +469,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
 
     }
->>>>>>> 94540f62a1f4d6cc7b263e55ec422f78a2b3a207
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
     public String printMessage(@CommandParam(value = "text") String text) {
@@ -482,9 +477,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     }
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
-    public String setTemperature(@CommandParam(value = "text") int temp) {
-        this.currentTemperature = temp;
-        return "this.currentTemperature = " + this.currentTemperature + "\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
+    public String setHumidity(@CommandParam(value = "text") int temp) {
+        this.currentHumidity = (float)temp;
+        return "this.currentHumidity = " + this.currentHumidity + "\n" + "Nombre de fois triggerEvent called : " + this.countTempAug
                 + "\n" + "HasDelayedAction ? " + delayManager.hasDelayedAction(weatherEntity, "Weather");
     }
 
@@ -622,8 +617,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     }
 
 
-public void increaseHumidity(Vector3fc position /* HumidityIncreaseEvent event, EntityRef worldEntity */) {
-    currentHumidity = this.climateConditionsSystem.getHumidity(position) / 100 ;
+public void increaseHumidity(HumidityIncreaseEvent event, EntityRef worldEntity ) {
     float humidity = this.currentHumidity;
     float humidityMin = 0f;
     float humidityMax = 100f;
@@ -634,14 +628,16 @@ public void increaseHumidity(Vector3fc position /* HumidityIncreaseEvent event, 
 
     // Ensure the humidity stays within the valid range
     humidity = Math.min(Math.max(humidity, humidityMin), humidityMax);
-
+    float value = humidity;
     // Configure the climate conditions system with the updated humidity value
-    Function<Float, Float> function = (Float number) -> humidity;
-
+    Function<Float, Float> function = (Float number) -> {
+        return (float) (value);
+    };
     this.climateConditionsSystem.configureHumidity(200, 200, 0, function, humidityMin, humidityMax);
+    this.changeHumidityPlayers();
 }
-/* Dealing with Humidity periodically 
- @ReceiveEvent
+
+    @ReceiveEvent
     public void chooseHumidity(DelayedActionTriggeredEvent event, EntityRef weatherEntity) {
         if (event.getActionId().equals(DELAYED_HUMIDITY_CHOICE)) {
             // We cancel all periodic action
@@ -649,7 +645,6 @@ public void increaseHumidity(Vector3fc position /* HumidityIncreaseEvent event, 
                 delayManager.cancelPeriodicAction(weatherEntity, HUMIDITY_INCREASE);
             }
 
-            this.countHumAug++;
             // Add a new periodic action to increase humidity
             delayManager.addPeriodicAction(weatherEntity, HUMIDITY_INCREASE, 0, 1000);
 
@@ -659,18 +654,17 @@ public void increaseHumidity(Vector3fc position /* HumidityIncreaseEvent event, 
 
     }
 
-@ReceiveEvent
+    @ReceiveEvent
     public void chooseHumidityVariable(PeriodicActionTriggeredEvent event, EntityRef weatherEntity) {
         switch (event.getActionId()) {
             case HUMIDITY_INCREASE:
                 weatherEntity.send(new HumidityIncreaseEvent());
-                this.triggerEvents();
                 break;
             // Add other humidity-related cases if needed in the future
         }
     }
 
-public void changeHumidityPlayers() {
+    public void changeHumidityPlayers() {
         List<Vector3fc> playerPos = this.getPlayersPosition();
         float currentHumid = 0;
 
@@ -680,7 +674,7 @@ public void changeHumidityPlayers() {
         }
         this.currentHumidity = currentHumid / playerPos.size();
     }
-*/
+
 
 }
 
