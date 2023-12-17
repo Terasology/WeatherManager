@@ -69,6 +69,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public static final String TEMPERATURE_DECREASE = "temperatureDecrease";
     public static final String TEMPERATURE_STAGNATE = "temperatureStagnate";
     public static final String DELAYED_TEMPERATURE_CHOICE = "delayTemp";
+
+    public static final String HUMIDITY_INCREASE = "HumidityIncrease";
+
     public static final float TMAX = 50f;
     public static final float TMIN = -10f;
     public static final float TFREEZE = 0f;
@@ -82,6 +85,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
     private WeatherConditionProvider weatherConditionProvider;
     private float currentTemperature;
+    private float currentHumidity;
 
     private ConditionAndDuration current;
     private EntityRef weatherEntity;
@@ -245,6 +249,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             }
             if (this.currentTemperature < 0) {
                 delayManager.addPeriodicAction(weatherEntity, FREEZE_WATER, 10, 100);
+
             }
 
         }
@@ -531,6 +536,19 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         }
 
 
+    }
+    public void increaseHumidity() {
+        float humidity = this.currentHumidity;
+        float humidityMin = climateConditionsSystem.getHumidityMinimum();
+        float humidityMax = climateConditionsSystem.getHumidityMaximum();
+        float randNbr = (float) (Math.random() * 0.01);
+        float value = (humidity - humidityMin + randNbr) / (humidityMax - humidityMin);
+        Function<Float, Float> function = (Float number) -> {
+            return (float) (value);
+        };
+
+        this.climateConditionsSystem.configureHumidity(200, 200, 0, function,
+                humidityMin, humidityMax);
     }
 }
 
