@@ -388,6 +388,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
                 this.current = new ConditionAndDuration(weatherCondition,time);
             }
         }
+    }
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
     public String printMessage(@CommandParam(value = "text") String text) {
@@ -484,6 +485,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     }
 
     /**
+     * This class will create a periodicAction which will either increase, decrease the temperature or make it stagnate
      * This class will create a periodicAction which will either increase, decrease the temperature or
      * make it stagnate
      *
@@ -510,6 +512,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
             //We add another delayed action to do this action again, over and over
             delayManager.addDelayedAction(weatherEntity, DELAYED_TEMPERATURE_CHOICE, 100000);
         }
+
+
+      
 
     }
 
