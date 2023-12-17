@@ -539,8 +539,8 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     }
     public void increaseHumidity() {
         float humidity = this.currentHumidity;
-        float humidityMin = climateConditionsSystem.getHumidityMinimum();
-        float humidityMax = climateConditionsSystem.getHumidityMaximum();
+        float humidityMin = 0f;
+        float humidityMax = 100f;
         float randNbr = (float) (Math.random() * 0.01);
         float value = (humidity - humidityMin + randNbr) / (humidityMax - humidityMin);
         Function<Float, Float> function = (Float number) -> {
