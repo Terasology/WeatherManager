@@ -235,7 +235,6 @@ public class WeatherManagerSystem extends BaseComponentSystem {
      * Adds/removes periodic actions and sends events based on the type of weather it currently is.
      */
     private void triggerEvents() {
-        curWeather();
         if (delayManager != null && weatherEntity != null) {
 
             if (delayManager.hasPeriodicAction(weatherEntity, MELT_SNOW)) {
