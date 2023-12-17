@@ -202,10 +202,9 @@ public class WeatherManagerSystem extends BaseComponentSystem {
     public void onTimeEvent(DelayedActionTriggeredEvent event, EntityRef worldEntity) {
         //Each time a delayedActionTriggeredEvent is trigger, we change the way the temperature change
         if (event.getActionId().equals("RandomWeather")) {
-            current = weatherConditionProvider.getNext();
-            currentWeather = current.condition.downfallCondition.getDownfallValues().type;
-            severity = current.condition.downfallCondition.getDownfallValues().amount;
-            currentWind.set(current.condition.wind);
+            for(Vector3fc position : this.getPlayersPosition()){
+                curWeather(position);
+            }
             triggerEvents();
             logger.debug("WEATHER CHANGED: " + current.condition + "(" + current.duration + ")");
         }
@@ -347,60 +346,66 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         return listPlayerPos;
     }
 
-    public void curWeather() {
+    public void curWeather(Vector3fc position) {
         Random rand = new Random();
         float windX = randomWindSpeed();
         float windY = randomWindSpeed();
         boolean withThunder = rand.nextInt(2) == 0 ? false : true;
         this.severity = withThunder == false ? Severity.MODERATE : Severity.HEAVY;
-        for (Vector3fc position : this.getPlayersPosition()) {
-            float currentHumidityDegree = this.climateConditionsSystem.getHumidity(position) / 100 ;
-            if (currentHumidityDegree > 0.7) {
-                if (this.currentTemperature > 0) {
-                    DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.RAIN, withThunder);
-                    WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
-                    float time = this.current.duration ;
-                    this.current = new ConditionAndDuration(weatherCondition,time);
-                } else if (this.currentTemperature > -10 && this.currentTemperature <= 0) {
-                    DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.SNOW, withThunder);
-                    WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
-                    float time = this.current.duration ;
-                    this.current = new ConditionAndDuration(weatherCondition,time);
+        float currentHumidityDegree = this.climateConditionsSystem.getHumidity(position) / 100 ;
+        if (currentHumidityDegree > 0.7) {
+            if (this.currentTemperature > 0) {
+                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.RAIN, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
+                this.currentWeather = DownfallCondition.DownfallType.RAIN ;
+                float time = this.current.duration ;
+                this.current = new ConditionAndDuration(weatherCondition,time);
+            } else if (this.currentTemperature > -10 && this.currentTemperature <= 0) {
+                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.SNOW, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
+                this.currentWeather = DownfallCondition.DownfallType.SNOW ;
+                float time = this.current.duration ;
+                this.current = new ConditionAndDuration(weatherCondition,time);
 
-                } else {
-                    DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.HAIL, withThunder);
-                    WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
-                    float time = this.current.duration ;
-                    this.current = new ConditionAndDuration(weatherCondition,time);
-                }
-            }
-            if (currentHumidityDegree <= 0.7 && currentHumidityDegree > 0.5) {
-                this.severity = Severity.LIGHT ;
-                if (this.currentTemperature > 0) {
-                    DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.RAIN, false);
-                    WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
-                    float time = this.current.duration ;
-                    this.current = new ConditionAndDuration(weatherCondition,time);
-                } else if (this.currentTemperature > -10 && this.currentTemperature <= 0) {
-                    DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.SNOW, false);
-                    WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
-                    float time = this.current.duration ;
-                    this.current = new ConditionAndDuration(weatherCondition,time);
-                } else {
-                    DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.HAIL, false);
-                    WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
-                    float time = this.current.duration ;
-                    this.current = new ConditionAndDuration(weatherCondition,time);
-                }
-            }
-            if (currentHumidityDegree <= 0.5) {
-                this.severity = Severity.NONE ;
-                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.NONE, false);
-                WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
+            } else {
+                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.HAIL, withThunder);
+                WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
+                this.currentWeather = DownfallCondition.DownfallType.HAIL ;
                 float time = this.current.duration ;
                 this.current = new ConditionAndDuration(weatherCondition,time);
             }
         }
+        if (currentHumidityDegree <= 0.7 && currentHumidityDegree > 0.5) {
+            this.severity = Severity.LIGHT ;
+            if (this.currentTemperature > 0) {
+                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.RAIN, false);
+                WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
+                this.currentWeather = DownfallCondition.DownfallType.RAIN ;
+                float time = this.current.duration ;
+                this.current = new ConditionAndDuration(weatherCondition,time);
+            } else if (this.currentTemperature > -10 && this.currentTemperature <= 0) {
+                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.SNOW, false);
+                WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
+                this.currentWeather = DownfallCondition.DownfallType.SNOW ;
+                float time = this.current.duration ;
+                this.current = new ConditionAndDuration(weatherCondition,time);
+            } else {
+                DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.HAIL, false);
+                WeatherCondition weatherCondition = new WeatherCondition(this.severity, condition, new Vector2f(windX, windY));
+                this.currentWeather = DownfallCondition.DownfallType.HAIL ;
+                float time = this.current.duration ;
+                this.current = new ConditionAndDuration(weatherCondition,time);
+            }
+        }
+        if (currentHumidityDegree <= 0.5) {
+            this.severity = Severity.NONE ;
+            DownfallCondition condition = DownfallCondition.get(this.severity, DownfallCondition.DownfallType.NONE, false);
+            WeatherCondition weatherCondition = new WeatherCondition(Severity.NONE, condition, new Vector2f(0, 0));
+            this.currentWeather = DownfallCondition.DownfallType.NONE ;
+            float time = this.current.duration ;
+            this.current = new ConditionAndDuration(weatherCondition,time);
+        }
+
     }
 
     @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
@@ -537,7 +542,7 @@ public class WeatherManagerSystem extends BaseComponentSystem {
 
 
     }
-    public void increaseHumidity() {
+    /**public void increaseHumidity() {
         float humidity = this.currentHumidity;
         float humidityMin = climateConditionsSystem.getHumidityMinimum();
         float humidityMax = climateConditionsSystem.getHumidityMaximum();
@@ -550,6 +555,16 @@ public class WeatherManagerSystem extends BaseComponentSystem {
         this.climateConditionsSystem.configureHumidity(200, 200, 0, function,
                 humidityMin, humidityMax);
     }
+     */
+    @Command(shortDescription = "Print Message", helpText = "Equivalent to a println but in the chat")
+    public String chWeather(){
+        for(Vector3fc position : this.getPlayersPosition()){
+            curWeather(position);
+        }
+        triggerEvents();
+        return "WEATHER CHANGED: " + current.condition + "(" + current.duration + ")" ;
+    }
+
 }
 
 
