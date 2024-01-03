@@ -7,7 +7,8 @@
     "dependencies": [
         { "id": "MarkovChains", "minVersion": "1.5.0" },
         { "id": "CoreAssets", "minVersion": "2.1.0" },
-        { "id": "FlowingLiquids", "minVersion": "1.2.0" }
+        { "id": "FlowingLiquids", "minVersion": "1.2.0" },
+        { "id": "ClimateConditions", "minVersion": "1.0.0"}
     ],
     "isAugmentation": true
 }

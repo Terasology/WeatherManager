@@ -1,7 +1,7 @@
 // Copyright 2021 The Terasology Foundation
 // SPDX-License-Identifier: Apache-2.0
 package org.terasology.weatherManager.weather;
-
+import java.util.Random;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
