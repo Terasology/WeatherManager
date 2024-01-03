@@ -3,11 +3,7 @@
 
 package org.terasology.weatherManager.components;
 
-import org.terasology.gestalt.entitysystem.component.Component;
+import org.terasology.gestalt.entitysystem.component.EmptyComponent;
 
-public class WeatherBase implements Component<WeatherBase> {
-    @Override
-    public void copyFrom(WeatherBase other) {
-
-    }
+public class WeatherBase extends EmptyComponent<WeatherBase> {
 }
